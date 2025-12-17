@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { LobbyState, LobbyPlayer, SkinType } from '@/types/game';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://joahiyjvnzivjnctzcjs.supabase.co';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const WS_URL = SUPABASE_URL.replace('https://', 'wss://') + '/functions/v1/realtime-game';
 
 // Generate a short room code (6 characters)
@@ -30,7 +30,7 @@ function dbToLobbyPlayer(row: any, profiles: Map<string, any>): LobbyPlayer {
 export async function createLobby(profileId: string): Promise<LobbyState | null> {
   try {
     const roomCode = generateRoomCode();
-    
+
     // Create lobby with short room code
     const { data: lobby, error: lobbyError } = await supabase
       .from('lobbies')
@@ -42,9 +42,9 @@ export async function createLobby(profileId: string): Promise<LobbyState | null>
       })
       .select()
       .single();
-    
+
     if (lobbyError) throw lobbyError;
-    
+
     // Add host as player
     const { error: playerError } = await supabase
       .from('lobby_players')
@@ -54,16 +54,16 @@ export async function createLobby(profileId: string): Promise<LobbyState | null>
         is_host: true,
         is_ready: false,
       });
-    
+
     if (playerError) throw playerError;
-    
+
     // Get profile info
     const { data: profile } = await supabase
       .from('profiles')
       .select('username, skin')
       .eq('id', profileId)
       .single();
-    
+
     return {
       id: lobby.id,
       roomCode: lobby.room_code || lobby.id.slice(0, 6).toUpperCase(),
@@ -89,7 +89,7 @@ export async function createLobby(profileId: string): Promise<LobbyState | null>
 export async function joinLobby(lobbyIdOrCode: string, profileId: string): Promise<LobbyState | null> {
   try {
     let lobbyId = lobbyIdOrCode;
-    
+
     // If it's a short code (<=8 chars), search by room_code column
     if (lobbyIdOrCode.length <= 8) {
       const searchCode = lobbyIdOrCode.toUpperCase();
@@ -99,14 +99,14 @@ export async function joinLobby(lobbyIdOrCode: string, profileId: string): Promi
         .eq('status', 'waiting')
         .eq('room_code', searchCode)
         .limit(1);
-      
+
       if (searchError || !lobbies || lobbies.length === 0) {
         console.error('Lobby not found with code:', searchCode);
         return null;
       }
       lobbyId = lobbies[0].id;
     }
-    
+
     // Check if lobby exists and has space
     const { data: lobby, error: lobbyError } = await supabase
       .from('lobbies')
@@ -114,23 +114,23 @@ export async function joinLobby(lobbyIdOrCode: string, profileId: string): Promi
       .eq('id', lobbyId)
       .eq('status', 'waiting')
       .single();
-    
+
     if (lobbyError || !lobby) {
       console.error('Lobby not found or not available');
       return null;
     }
-    
+
     // Check player count
     const { count } = await supabase
       .from('lobby_players')
       .select('*', { count: 'exact', head: true })
       .eq('lobby_id', lobbyId);
-    
+
     if ((count || 0) >= lobby.max_players) {
       console.error('Lobby is full');
       return null;
     }
-    
+
     // Check if already in lobby
     const { data: existing } = await supabase
       .from('lobby_players')
@@ -138,7 +138,7 @@ export async function joinLobby(lobbyIdOrCode: string, profileId: string): Promi
       .eq('lobby_id', lobbyId)
       .eq('profile_id', profileId)
       .maybeSingle();
-    
+
     if (!existing) {
       // Join lobby
       const { error: joinError } = await supabase
@@ -149,10 +149,10 @@ export async function joinLobby(lobbyIdOrCode: string, profileId: string): Promi
           is_host: false,
           is_ready: false,
         });
-      
+
       if (joinError) throw joinError;
     }
-    
+
     // Get full lobby state
     return await getLobbyState(lobbyId);
   } catch (error) {
@@ -169,17 +169,17 @@ export async function getLobbyState(lobbyId: string): Promise<LobbyState | null>
       .select('*')
       .eq('id', lobbyId)
       .single();
-    
+
     if (lobbyError || !lobby) return null;
-    
+
     // Get players
     const { data: players, error: playersError } = await supabase
       .from('lobby_players')
       .select('*, profiles(username, skin)')
       .eq('lobby_id', lobbyId);
-    
+
     if (playersError) throw playersError;
-    
+
     const lobbyPlayers: LobbyPlayer[] = (players || []).map((p: any) => ({
       id: p.profile_id,
       username: p.profiles?.username || 'UNKNOWN',
@@ -187,7 +187,7 @@ export async function getLobbyState(lobbyId: string): Promise<LobbyState | null>
       isReady: p.is_ready,
       isHost: p.is_host,
     }));
-    
+
     return {
       id: lobby.id,
       roomCode: (lobby as any).room_code || lobby.id.slice(0, 6).toUpperCase(),
@@ -212,7 +212,7 @@ export async function leaveLobby(lobbyId: string, profileId: string): Promise<bo
       .select('host_id')
       .eq('id', lobbyId)
       .single();
-    
+
     if (lobby?.host_id === profileId) {
       // Host leaving - delete the lobby
       await supabase.from('lobbies').delete().eq('id', lobbyId);
@@ -224,7 +224,7 @@ export async function leaveLobby(lobbyId: string, profileId: string): Promise<bo
         .eq('lobby_id', lobbyId)
         .eq('profile_id', profileId);
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error leaving lobby:', error);
@@ -240,7 +240,7 @@ export async function setReady(lobbyId: string, profileId: string, isReady: bool
       .update({ is_ready: isReady })
       .eq('lobby_id', lobbyId)
       .eq('profile_id', profileId);
-    
+
     return !error;
   } catch (error) {
     console.error('Error updating ready status:', error);
@@ -253,12 +253,12 @@ export async function startGame(lobbyId: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('lobbies')
-      .update({ 
+      .update({
         status: 'starting',
         started_at: new Date().toISOString(),
       })
       .eq('id', lobbyId);
-    
+
     return !error;
   } catch (error) {
     console.error('Error starting game:', error);
@@ -283,9 +283,9 @@ export async function getAvailableLobbies(): Promise<LobbyState[]> {
       .eq('status', 'waiting')
       .order('created_at', { ascending: false })
       .limit(10);
-    
+
     if (error) throw error;
-    
+
     return (lobbies || []).map((lobby: any) => ({
       id: lobby.id,
       roomCode: lobby.room_code || lobby.id.slice(0, 6).toUpperCase(),
@@ -327,7 +327,7 @@ export async function submitGameResult(
         placement,
         seed,
       });
-    
+
     return !error;
   } catch (error) {
     console.error('Error submitting game result:', error);
@@ -348,8 +348,8 @@ export class GameWebSocket {
   private maxReconnectAttempts = 3;
 
   constructor(
-    lobbyId: string, 
-    playerId: string, 
+    lobbyId: string,
+    playerId: string,
     playerName: string,
     onMessage: (data: any) => void,
     onClose: () => void,
@@ -366,17 +366,17 @@ export class GameWebSocket {
   connect(): Promise<boolean> {
     return new Promise((resolve) => {
       const url = `${WS_URL}?lobbyId=${this.lobbyId}&playerId=${this.playerId}&playerName=${encodeURIComponent(this.playerName)}&skin=${this.playerSkin}`;
-      
+
       console.log('Connecting to WebSocket:', url);
-      
+
       this.ws = new WebSocket(url);
-      
+
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.reconnectAttempts = 0;
         resolve(true);
       };
-      
+
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -385,17 +385,17 @@ export class GameWebSocket {
           console.error('Error parsing WebSocket message:', error);
         }
       };
-      
+
       this.ws.onclose = () => {
         console.log('WebSocket closed');
         this.onClose();
       };
-      
+
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
         resolve(false);
       };
-      
+
       // Timeout fallback
       setTimeout(() => {
         if (this.ws?.readyState !== WebSocket.OPEN) {
@@ -477,7 +477,7 @@ export function subscribeLobbyUpdates(
       }
     )
     .subscribe();
-  
+
   return () => {
     supabase.removeChannel(channel);
   };

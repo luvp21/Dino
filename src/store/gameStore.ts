@@ -11,32 +11,33 @@ interface GameStore {
   setProfileId: (id: string | null) => void;
   updateProfile: (data: Partial<PlayerProfile>) => void;
   syncProfile: () => Promise<void>;
-  
+
   // Skin
   currentSkin: SkinType;
   setSkin: (skin: SkinType) => void;
-  
+
   // Lobby
   lobby: LobbyState | null;
   setLobby: (lobby: LobbyState | null) => void;
-  
+
   // Game
   gameState: GameState | null;
   setGameState: (state: GameState | null) => void;
   localPlayer: PlayerGameState | null;
   setLocalPlayer: (player: PlayerGameState | null) => void;
-  
+  resetGuestSession: () => void;
+
   // Leaderboard
   leaderboard: LeaderboardEntry[];
   setLeaderboard: (entries: LeaderboardEntry[]) => void;
   fetchLeaderboard: (type?: 'all-time' | 'weekly') => Promise<void>;
-  
+
   // UI State
   isConnected: boolean;
   setIsConnected: (connected: boolean) => void;
   currentView: 'home' | 'lobby' | 'game' | 'leaderboard' | 'profile' | 'skins';
   setCurrentView: (view: 'home' | 'lobby' | 'game' | 'leaderboard' | 'profile' | 'skins') => void;
-  
+
   // Session
   sessionId: string;
 }
@@ -68,7 +69,38 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       // Session
       sessionId: generateSessionId(),
-      
+
+      resetGuestSession: () => {
+        // Clear persisted Zustand storage
+        localStorage.removeItem("pixel-dino-storage");
+
+        // Generate new session ID
+        const newSessionId = `session_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+
+        localStorage.setItem("pixel-dino-session", newSessionId);
+
+        // Reset store state
+        set({
+          sessionId: newSessionId,
+          profile: null,
+          profileId: null,
+          currentSkin: "classic",
+          lobby: null,
+          gameState: null,
+          localPlayer: null,
+          leaderboard: [],
+          isConnected: false,
+          currentView: "home",
+        });
+
+        // Recreate fresh guest profile
+        setTimeout(() => {
+          get().syncProfile();
+        }, 0);
+      },
+
       // Profile
       profile: null,
       profileId: null,
@@ -79,7 +111,7 @@ export const useGameStore = create<GameStore>()(
         if (currentProfile) {
           const updatedProfile = { ...currentProfile, ...data };
           set({ profile: updatedProfile });
-          
+
           // Sync to database if we have a profileId
           const profileId = get().profileId;
           if (profileId) {
@@ -100,21 +132,21 @@ export const useGameStore = create<GameStore>()(
           }
         }
       },
-      
+
       syncProfile: async () => {
         const state = get();
         const sessionId = state.sessionId;
         let profile = state.profile;
-        
+
         if (!profile) {
           profile = generateGuestProfile();
           set({ profile });
         }
-        
+
         try {
           // First check if user is authenticated
           const { data: { user } } = await supabase.auth.getUser();
-          
+
           if (user) {
             // User is authenticated - find or create their profile
             const { data: authProfile } = await supabase
@@ -122,7 +154,7 @@ export const useGameStore = create<GameStore>()(
               .select('*')
               .eq('user_id', user.id)
               .maybeSingle();
-            
+
             if (authProfile) {
               set({
                 profileId: authProfile.id,
@@ -144,7 +176,7 @@ export const useGameStore = create<GameStore>()(
             // If no profile exists for authenticated user, it will be created by useAuth hook
             return;
           }
-          
+
           // Guest user flow
           const { data: existingProfile } = await supabase
             .from('profiles')
@@ -152,7 +184,7 @@ export const useGameStore = create<GameStore>()(
             .eq('session_id', sessionId)
             .eq('is_guest', true)
             .maybeSingle();
-          
+
           if (existingProfile) {
             set({
               profileId: existingProfile.id,
@@ -181,7 +213,7 @@ export const useGameStore = create<GameStore>()(
               })
               .select()
               .single();
-            
+
             if (createError) {
               if (createError.code === '23505') {
                 const newUsername = `DINO_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
@@ -195,16 +227,16 @@ export const useGameStore = create<GameStore>()(
                   })
                   .select()
                   .single();
-                
+
                 if (retryProfile) {
-                  set({ 
+                  set({
                     profileId: retryProfile.id,
                     profile: { ...profile, id: retryProfile.id, username: newUsername }
                   });
                 }
               }
             } else if (newProfile) {
-              set({ 
+              set({
                 profileId: newProfile.id,
                 profile: { ...profile, id: newProfile.id }
               });
@@ -214,7 +246,7 @@ export const useGameStore = create<GameStore>()(
           console.error('Error syncing profile:', error);
         }
       },
-      
+
       // Skin
       currentSkin: 'classic',
       setSkin: (skin) => {
@@ -224,17 +256,17 @@ export const useGameStore = create<GameStore>()(
           get().updateProfile({ skin });
         }
       },
-      
+
       // Lobby
       lobby: null,
       setLobby: (lobby) => set({ lobby }),
-      
+
       // Game
       gameState: null,
       setGameState: (state) => set({ gameState: state }),
       localPlayer: null,
       setLocalPlayer: (player) => set({ localPlayer: player }),
-      
+
       // Leaderboard
       leaderboard: [],
       setLeaderboard: (entries) => set({ leaderboard: entries }),
@@ -244,9 +276,9 @@ export const useGameStore = create<GameStore>()(
             limit_count: 10,
             time_filter: type,
           });
-          
+
           if (error) throw error;
-          
+
           if (data) {
             const entries: LeaderboardEntry[] = data.map((row: any) => ({
               rank: Number(row.rank),
@@ -262,7 +294,7 @@ export const useGameStore = create<GameStore>()(
           console.error('Error fetching leaderboard:', error);
         }
       },
-      
+
       // UI State
       isConnected: false,
       setIsConnected: (connected) => set({ isConnected: connected }),

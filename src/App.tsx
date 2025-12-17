@@ -14,6 +14,7 @@ import LobbyPage from "@/pages/LobbyPage";
 import MultiplayerGamePage from "@/pages/MultiplayerGamePage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
+import AuthCallback from "@/pages/auth/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/skins" element={<SkinsPage />} />

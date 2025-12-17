@@ -1,87 +1,100 @@
-import { useEffect, useState, useCallback } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { useGameStore } from '@/store/gameStore';
-import type { SkinType } from '@/types/game';
+import { useEffect, useState, useCallback } from "react";
+import type { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { useGameStore } from "@/store/gameStore";
+import type { SkinType } from "@/types/game";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  const { setProfile, setProfileId, profile, currentSkin } = useGameStore();
 
-  // Sync profile with authenticated user
-  const syncAuthProfile = useCallback(async (authUser: User) => {
-    try {
-      // Check if profile exists for this user
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .maybeSingle();
+  const { setProfile, setProfileId, currentSkin } = useGameStore();
 
-      if (existingProfile) {
-        setProfileId(existingProfile.id);
-        setProfile({
-          id: existingProfile.id,
-          username: existingProfile.username,
-          skin: existingProfile.skin as SkinType,
-          totalMatches: existingProfile.total_matches,
-          bestDistance: existingProfile.best_distance,
-          averageDistance: existingProfile.average_distance,
-          totalPlaytime: existingProfile.total_playtime,
-          joinDate: existingProfile.created_at,
-          isGuest: false,
-        });
-      } else {
-        // Create new profile for authenticated user
-        const username = authUser.user_metadata?.name?.toUpperCase().slice(0, 10).replace(/[^A-Z0-9_]/g, '') ||
-          authUser.email?.split('@')[0]?.toUpperCase().slice(0, 10) || 
-          `DINO_${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-        
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
+  /* --------------------------------------------------
+   * Sync profile AFTER email is confirmed
+   * -------------------------------------------------- */
+  const syncAuthProfile = useCallback(
+    async (authUser: User) => {
+      if (!authUser.email_confirmed_at) return;
+
+      try {
+        // 1️⃣ Existing authenticated profile
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", authUser.id)
+          .maybeSingle();
+
+        if (existingProfile) {
+          setProfileId(existingProfile.id);
+          setProfile({
+            id: existingProfile.id,
+            username: existingProfile.username,
+            skin: existingProfile.skin as SkinType,
+            totalMatches: existingProfile.total_matches,
+            bestDistance: existingProfile.best_distance,
+            averageDistance: existingProfile.average_distance,
+            totalPlaytime: existingProfile.total_playtime,
+            joinDate: existingProfile.created_at,
+            isGuest: false,
+          });
+          return;
+        }
+
+        // 2️⃣ CLAIM GUEST PROFILE (🔥 THIS IS THE KEY PART)
+        const guestProfile = useGameStore.getState().profile;
+        const guestProfileId = useGameStore.getState().profileId;
+
+        if (guestProfile && guestProfile.isGuest && guestProfileId) {
+          const { data: upgradedProfile, error } = await supabase
+            .from("profiles")
+            .update({
+              user_id: authUser.id,
+              is_guest: false,
+            })
+            .eq("id", guestProfileId)
+            .select()
+            .single();
+
+          if (!error && upgradedProfile) {
+            setProfileId(upgradedProfile.id);
+            setProfile({
+              id: upgradedProfile.id,
+              username: upgradedProfile.username,
+              skin: upgradedProfile.skin as SkinType,
+              totalMatches: upgradedProfile.total_matches,
+              bestDistance: upgradedProfile.best_distance,
+              averageDistance: upgradedProfile.average_distance,
+              totalPlaytime: upgradedProfile.total_playtime,
+              joinDate: upgradedProfile.created_at,
+              isGuest: false,
+            });
+            return;
+          }
+        }
+
+        // 3️⃣ FALLBACK: create brand new profile (rare case)
+        const username =
+          authUser.user_metadata?.name
+            ?.toUpperCase()
+            .replace(/[^A-Z0-9_]/g, "")
+            .slice(0, 10) ||
+          authUser.email?.split("@")[0]?.toUpperCase().slice(0, 10) ||
+          `DINO_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+        const { data: newProfile, error } = await supabase
+          .from("profiles")
           .insert({
             username,
-            skin: currentSkin || 'classic',
+            skin: currentSkin || "classic",
             is_guest: false,
             user_id: authUser.id,
           })
           .select()
           .single();
 
-        if (createError) {
-          // Handle duplicate username
-          if (createError.code === '23505') {
-            const retryUsername = `DINO_${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-            const { data: retryProfile } = await supabase
-              .from('profiles')
-              .insert({
-                username: retryUsername,
-                skin: currentSkin || 'classic',
-                is_guest: false,
-                user_id: authUser.id,
-              })
-              .select()
-              .single();
-
-            if (retryProfile) {
-              setProfileId(retryProfile.id);
-              setProfile({
-                id: retryProfile.id,
-                username: retryUsername,
-                skin: retryProfile.skin as SkinType,
-                totalMatches: 0,
-                bestDistance: 0,
-                averageDistance: 0,
-                totalPlaytime: 0,
-                joinDate: retryProfile.created_at,
-                isGuest: false,
-              });
-            }
-          }
-        } else if (newProfile) {
+        if (!error && newProfile) {
           setProfileId(newProfile.id);
           setProfile({
             id: newProfile.id,
@@ -95,122 +108,99 @@ export function useAuth() {
             isGuest: false,
           });
         }
+      } catch (err) {
+        console.error("Profile sync error:", err);
       }
-    } catch (error) {
-      console.error('Error syncing auth profile:', error);
-    }
-  }, [setProfile, setProfileId, currentSkin]);
+    },
+    [setProfile, setProfileId, currentSkin]
+  );
 
+  /* --------------------------------------------------
+   * Auth listener
+   * -------------------------------------------------- */
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Defer profile sync to avoid deadlocks
-        if (session?.user) {
-          setTimeout(() => {
-            syncAuthProfile(session.user);
-          }, 0);
+        if (session?.user?.email_confirmed_at) {
+          setTimeout(() => syncAuthProfile(session.user), 0);
         }
-      }
-    );
+      });
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
       setLoading(false);
 
-      if (session?.user) {
-        setTimeout(() => {
-          syncAuthProfile(session.user);
-        }, 0);
+      if (data.session?.user?.email_confirmed_at) {
+        setTimeout(() => syncAuthProfile(data.session.user), 0);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [syncAuthProfile]);
 
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
+  /* --------------------------------------------------
+   * Auth actions
+   * -------------------------------------------------- */
+
+  const signUp = async (email: string, password: string) =>
+    supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    return { error };
-  };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
+  const signIn = async (email: string, password: string) =>
+    supabase.auth.signInWithPassword({ email, password });
 
-  const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+  const signInWithGoogle = async () =>
+    supabase.auth.signInWithOAuth({
+      provider: "google",
       options: {
-        redirectTo: redirectUrl,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    return { error };
-  };
 
-  const sendOtp = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
+  const sendOtp = async (email: string) =>
+    supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    return { error };
-  };
 
-  const verifyOtp = async (email: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
+  const verifyOtp = async (email: string, token: string) =>
+    supabase.auth.verifyOtp({
       email,
       token,
-      type: 'email',
+      type: "email",
     });
-    return { error };
-  };
+
+  const resendVerification = async (email: string) =>
+    supabase.auth.resend({ type: "signup", email });
+
+  const resetPassword = async (email: string) =>
+    supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?mode=reset`,
+    });
+
+  const updatePassword = async (password: string) =>
+    supabase.auth.updateUser({ password });
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setUser(null);
-      setSession(null);
-      // Reset to guest profile
-      useGameStore.getState().syncProfile();
-    }
-    return { error };
-  };
+    await supabase.auth.signOut();
 
-  const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/auth?mode=reset`;
-    
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-    return { error };
-  };
+    setUser(null);
+    setSession(null);
 
-  const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    return { error };
+    // 🔥 HARD RESET guest state
+    useGameStore.getState().resetGuestSession();
   };
 
   return {
@@ -218,13 +208,17 @@ export function useAuth() {
     session,
     loading,
     isAuthenticated: !!user,
+
     signUp,
     signIn,
     signInWithGoogle,
+
     sendOtp,
     verifyOtp,
-    signOut,
+    resendVerification,
+
     resetPassword,
     updatePassword,
+    signOut,
   };
 }
