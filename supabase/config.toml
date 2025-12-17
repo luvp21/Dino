@@ -1,0 +1,4 @@
+project_id = "joahiyjvnzivjnctzcjs"
+
+[functions.realtime-game]
+verify_jwt = false
