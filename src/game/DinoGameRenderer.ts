@@ -1,18 +1,17 @@
 // =============================================
 // DINO GAME RENDERER - SPRITE-BASED
 // Uses Chrome's offline-sprite.png for authentic rendering
-// Supports multiple skins via CSS filters + special effects
+// Supports multiple skins via CSS filters
 // =============================================
 
 import { GAME_CONFIG, type GameState, type PlayerGameState, type Obstacle, type SkinType } from '@/types/game';
 import { SpriteLoader } from './sprites/SpriteLoader';
 import { getSkinConfig, getSpriteDefinition, type SkinConfig } from './sprites/SkinConfig';
 import type { SpriteDefinition, SpriteCoords } from './sprites/SpriteDefinitions';
-import { WinterEffects } from './effects/WinterEffects';
 
-const { CANVAS_WIDTH, CANVAS_HEIGHT, DINO_X, DINO_WIDTH, DINO_HEIGHT, DINO_DUCK_HEIGHT, GROUND_Y } = GAME_CONFIG;
+const { CANVAS_WIDTH, CANVAS_HEIGHT, DINO_X, DINO_HEIGHT, DINO_DUCK_HEIGHT, GROUND_Y, DINO_START_Y } = GAME_CONFIG;
 
-// Player colors for multiplayer (future use)
+// Player colors for multiplayer
 const PLAYER_COLORS = ['#2ECC71', '#E74C3C', '#3498DB', '#F1C40F'];
 
 export class DinoGameRenderer {
@@ -28,9 +27,10 @@ export class DinoGameRenderer {
   private pterodactylFrame: number = 0;
   private playerColorMap: Map<string, string> = new Map();
 
-  // Special effects
-  private winterEffects: WinterEffects | null = null;
-  private frameCount: number = 0;
+  // Restart button state
+  private restartButtonBounds: { x: number; y: number; w: number; h: number } | null = null;
+  private restartHovered: boolean = false;
+  private restartPressed: boolean = false;
 
   constructor(canvas: HTMLCanvasElement, skin: SkinType = 'classic') {
     const ctx = canvas.getContext('2d');
@@ -39,22 +39,13 @@ export class DinoGameRenderer {
     this.ctx = ctx;
     this.skin = skin;
     this.skinConfig = getSkinConfig(skin);
-    this.spriteDef = getSpriteDefinition(skin, false); // Use LDPI for now
+    this.spriteDef = getSpriteDefinition(skin, false);
 
-    // Set canvas size
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-
-    // Enable pixel-perfect rendering
     ctx.imageSmoothingEnabled = false;
 
-    // Load sprite sheet
     this.loadSprite();
-
-    // Initialize special effects for winter skin
-    if (skin === 'winter') {
-      this.winterEffects = new WinterEffects(CANVAS_WIDTH, CANVAS_HEIGHT, GROUND_Y + DINO_HEIGHT + 5);
-    }
   }
 
   private async loadSprite(): Promise<void> {
@@ -72,13 +63,6 @@ export class DinoGameRenderer {
     this.skinConfig = getSkinConfig(skin);
     this.spriteDef = getSpriteDefinition(skin, false);
     this.loadSprite();
-
-    // Initialize/clear winter effects
-    if (skin === 'winter') {
-      this.winterEffects = new WinterEffects(CANVAS_WIDTH, CANVAS_HEIGHT, GROUND_Y + DINO_HEIGHT + 5);
-    } else {
-      this.winterEffects = null;
-    }
   }
 
   private getPlayerColor(playerId: string, playerIndex: number): string {
@@ -92,7 +76,6 @@ export class DinoGameRenderer {
 
   render(state: GameState, localPlayerId?: string): void {
     const bgColor = this.skinConfig.backgroundColor || '#FFFFFF';
-    this.frameCount++;
 
     // Clear canvas
     this.ctx.fillStyle = bgColor;
@@ -107,20 +90,13 @@ export class DinoGameRenderer {
       this.pterodactylFrame = (this.pterodactylFrame + 1) % 2;
     }
 
-    // Update winter effects if active
-    if (this.winterEffects) {
-      this.winterEffects.update(state.speed);
-    }
-
-    // Draw frost overlay first (background layer)
-    if (this.winterEffects) {
-      this.winterEffects.renderFrostOverlay(this.ctx);
-    }
-
-    // Apply skin filter if set
+    // Apply skin filter
     if (this.skinConfig.filter) {
       this.ctx.filter = this.skinConfig.filter;
     }
+
+    // Draw clouds (behind everything)
+    this.drawClouds(state.distance);
 
     // Draw ground/horizon
     this.drawGround(state.distance);
@@ -129,9 +105,6 @@ export class DinoGameRenderer {
     state.obstacles.forEach(obstacle => {
       this.drawObstacle(obstacle);
     });
-
-    // Reset filter before drawing dinos (so scarf colors are correct)
-    this.ctx.filter = 'none';
 
     // Draw players
     const localPlayerIndex = state.players.findIndex(p => p.id === localPlayerId);
@@ -149,31 +122,11 @@ export class DinoGameRenderer {
 
     sortedPlayers.forEach((player, drawIndex) => {
       const isLocal = player.id === localPlayerId;
-
-      // Apply filter for dino sprite
-      if (this.skinConfig.filter) {
-        this.ctx.filter = this.skinConfig.filter;
-      }
-
       this.drawDino(player, isLocal, drawIndex);
-
-      // Reset filter and draw winter accessories
-      this.ctx.filter = 'none';
-
-      if (this.winterEffects && player.isAlive) {
-        const x = DINO_X + drawIndex * 8;
-        const y = player.y;
-        this.winterEffects.renderDinoScarf(this.ctx, x, y, player.isDucking);
-        if (!player.isDucking) {
-          this.winterEffects.renderBreathVapor(this.ctx, x, y, this.frameCount);
-        }
-      }
     });
 
-    // Draw snowflakes on top
-    if (this.winterEffects) {
-      this.winterEffects.render(this.ctx);
-    }
+    // Reset filter for UI
+    this.ctx.filter = 'none';
 
     // Draw HI score
     this.drawHiScore(state);
@@ -191,16 +144,14 @@ export class DinoGameRenderer {
     }
 
     const horizon = this.spriteDef.HORIZON;
-    const y = GROUND_Y + DINO_HEIGHT + 5;
     const offset = Math.floor(distance * 0.5) % horizon.w;
 
-    // Draw scrolling horizon line
-    // First segment
+    // Ground line at GROUND_Y
     const firstWidth = Math.min(horizon.w - offset, CANVAS_WIDTH);
     this.ctx.drawImage(
       this.spriteSheet,
       horizon.x + offset, horizon.y, firstWidth, horizon.h,
-      0, y, firstWidth, horizon.h
+      0, GROUND_Y, firstWidth, horizon.h
     );
 
     // Second segment (wraps around)
@@ -208,18 +159,14 @@ export class DinoGameRenderer {
       this.ctx.drawImage(
         this.spriteSheet,
         horizon.x, horizon.y, CANVAS_WIDTH - firstWidth, horizon.h,
-        firstWidth, y, CANVAS_WIDTH - firstWidth, horizon.h
+        firstWidth, GROUND_Y, CANVAS_WIDTH - firstWidth, horizon.h
       );
     }
-
-    // Draw clouds
-    this.drawClouds(distance);
   }
 
   private drawGroundFallback(distance: number): void {
-    const y = GROUND_Y + DINO_HEIGHT + 5;
     this.ctx.fillStyle = this.skinConfig.groundColor || '#737373';
-    this.ctx.fillRect(0, y, CANVAS_WIDTH, 2);
+    this.ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 2);
 
     // Ground texture
     const offset = Math.floor(distance * 0.5) % 600;
@@ -230,7 +177,7 @@ export class DinoGameRenderer {
       const drawX = i - (offset % 600);
 
       if (random < 0.15) {
-        this.ctx.fillRect(drawX, y + 4, 2 + Math.floor(random * 3), 2);
+        this.ctx.fillRect(drawX, GROUND_Y + 4, 2 + Math.floor(random * 3), 2);
       }
     }
   }
@@ -241,7 +188,7 @@ export class DinoGameRenderer {
     const cloud = this.spriteDef.CLOUD;
     const offset = Math.floor(distance * 0.2) % (CANVAS_WIDTH * 2);
 
-    // Draw a few clouds at different positions
+    // Clouds at different heights
     const cloudPositions = [
       { x: 100 - offset % CANVAS_WIDTH, y: 30 },
       { x: 350 - offset % CANVAS_WIDTH, y: 50 },
@@ -280,15 +227,17 @@ export class DinoGameRenderer {
     let frame: SpriteCoords;
 
     if (player.isDucking) {
+      // Ducking animation
       frame = this.runFrame === 0 ? this.spriteDef.TREX.DUCKING_1 : this.spriteDef.TREX.DUCKING_2;
-      // Ducking dino is shorter, adjust y position
-      const duckY = y + (DINO_HEIGHT - DINO_DUCK_HEIGHT);
+      // Position duck so bottom aligns with ground (same as standing dino feet)
+      const duckY = GROUND_Y - DINO_DUCK_HEIGHT;
       this.ctx.drawImage(
         this.spriteSheet,
         trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
         x, duckY, frame.w, frame.h
       );
     } else if (player.isJumping) {
+      // Jumping (use waiting frame for static pose)
       frame = this.spriteDef.TREX.JUMPING;
       this.ctx.drawImage(
         this.spriteSheet,
@@ -308,7 +257,7 @@ export class DinoGameRenderer {
     // Draw player indicator for multiplayer
     if (!isLocal) {
       const playerColor = this.playerColorMap.get(player.id) || '#2ECC71';
-      const indicatorY = Math.min(y - 15, GROUND_Y - 60);
+      const indicatorY = Math.min(y - 15, DINO_START_Y - 20);
       this.ctx.fillStyle = playerColor;
       this.ctx.beginPath();
       this.ctx.arc(x + frame.w / 2, indicatorY, 4, 0, Math.PI * 2);
@@ -320,9 +269,9 @@ export class DinoGameRenderer {
     this.ctx.fillStyle = '#262626';
 
     if (player.isDucking) {
-      // Ducking body
-      this.ctx.fillRect(x, y + (DINO_HEIGHT - DINO_DUCK_HEIGHT) + 4, 50, 14);
-      this.ctx.fillRect(x + 44, y + (DINO_HEIGHT - DINO_DUCK_HEIGHT), 14, 14);
+      const duckY = GROUND_Y - DINO_DUCK_HEIGHT;
+      this.ctx.fillRect(x, duckY + 4, 50, 18);
+      this.ctx.fillRect(x + 44, duckY, 14, 14);
     } else {
       // Head
       this.ctx.fillRect(x + 30, y - 2, 14, 18);
@@ -339,33 +288,25 @@ export class DinoGameRenderer {
 
   private drawDeadDino(player: PlayerGameState, drawIndex: number): void {
     const x = DINO_X + drawIndex * 8;
-    const y = GROUND_Y;
+
+    // Keep the exact collision pose position instead of snapping to start Y
+    const y = player.isDucking ? (GROUND_Y - DINO_DUCK_HEIGHT) : player.y;
 
     if (!this.spriteReady || !this.spriteSheet) {
-      this.ctx.globalAlpha = 0.4;
       this.ctx.fillStyle = '#262626';
       this.ctx.fillRect(x + 14, y + 14, 24, 22);
       this.ctx.fillRect(x + 30, y - 2, 14, 18);
-      this.ctx.globalAlpha = 1;
       return;
     }
 
     const trexBase = this.spriteDef.TREX_BASE;
     const frame = this.spriteDef.TREX.CRASHED;
 
-    this.ctx.globalAlpha = 0.4;
     this.ctx.drawImage(
       this.spriteSheet,
       trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
       x, y, frame.w, frame.h
     );
-    this.ctx.globalAlpha = 1;
-
-    // Dead indicator
-    this.ctx.fillStyle = '#FF0000';
-    this.ctx.font = '10px "Press Start 2P", monospace';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('☠', x + frame.w / 2, y - 15);
   }
 
   private drawObstacle(obstacle: Obstacle): void {
@@ -382,7 +323,6 @@ export class DinoGameRenderer {
         this.drawCactusLarge(obstacle.x, obstacle.y);
         break;
       case 'cactus-group':
-        // Draw multiple small cacti
         this.drawCactusSmall(obstacle.x, obstacle.y);
         this.drawCactusSmall(obstacle.x + 18, obstacle.y);
         this.drawCactusSmall(obstacle.x + 34, obstacle.y);
@@ -465,33 +405,118 @@ export class DinoGameRenderer {
   }
 
   private drawGameOver(): void {
-    const bgColor = this.skinConfig.backgroundColor || '#FFFFFF';
     const fgColor = this.skinConfig.filter ? '#FFFFFF' : '#1A1A1A';
 
-    // Semi-transparent overlay
-    this.ctx.fillStyle = bgColor;
-    this.ctx.globalAlpha = 0.85;
-    this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    this.ctx.globalAlpha = 1;
-
-    // Game Over text (could use sprite, but text works well)
-    this.ctx.fillStyle = fgColor;
-    this.ctx.font = '20px "Press Start 2P", monospace';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
-
-    // Draw restart button sprite if available
+    // Match the classic Dino "GAME OVER" layout: text top-center + restart icon
     if (this.spriteReady && this.spriteSheet) {
+      const gameOver = this.spriteDef.GAME_OVER;
       const restart = this.spriteDef.RESTART;
+
+      const goX = Math.round(CANVAS_WIDTH / 2 - gameOver.w / 2);
+      const goY = 18;
+      const rX = Math.round(CANVAS_WIDTH / 2 - restart.w / 2);
+      const rY = goY + 20;
+
+      // Store button bounds for click detection
+      const padding = 6;
+      this.restartButtonBounds = {
+        x: rX - padding,
+        y: rY - padding,
+        w: restart.w + padding * 2,
+        h: restart.h + padding * 2,
+      };
+
+      // If the skin uses an invert-like filter, invert UI sprites so they stay readable.
+      this.ctx.save();
+      if (this.skinConfig.filter) {
+        this.ctx.filter = 'invert(1)';
+      }
+
+      this.ctx.drawImage(
+        this.spriteSheet,
+        gameOver.x, gameOver.y, gameOver.w, gameOver.h,
+        goX, goY, gameOver.w, gameOver.h
+      );
+
+      // Apply hover/press animation offset
+      let offsetY = 0;
+      if (this.restartPressed) {
+        offsetY = 2; // Press down effect
+      } else if (this.restartHovered) {
+        offsetY = -2; // Hover lift effect
+      }
+
       this.ctx.drawImage(
         this.spriteSheet,
         restart.x, restart.y, restart.w, restart.h,
-        CANVAS_WIDTH / 2 - restart.w / 2, CANVAS_HEIGHT / 2 + 10, restart.w, restart.h
+        rX, rY + offsetY, restart.w, restart.h
       );
-    } else {
-      this.ctx.font = '8px "Press Start 2P", monospace';
-      this.ctx.fillText('PRESS SPACE TO RESTART', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+
+      this.ctx.restore();
+
+      // Pixel border around restart button with hover/press states
+      this.ctx.strokeStyle = fgColor;
+      this.ctx.lineWidth = this.restartHovered ? 3 : 2;
+
+      // Draw button background on hover
+      if (this.restartHovered) {
+        this.ctx.fillStyle = this.skinConfig.filter ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+        this.ctx.fillRect(rX - padding, rY - padding + offsetY, restart.w + padding * 2, restart.h + padding * 2);
+      }
+
+      this.ctx.strokeRect(rX - padding, rY - padding + offsetY, restart.w + padding * 2, restart.h + padding * 2);
+      return;
     }
+
+    // Fallback when sprite sheet isn't ready - store bounds for fallback button too
+    const btnW = 120;
+    const btnH = 24;
+    const btnX = CANVAS_WIDTH / 2 - btnW / 2;
+    const btnY = 42;
+    this.restartButtonBounds = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+    let offsetY = 0;
+    if (this.restartPressed) offsetY = 2;
+    else if (this.restartHovered) offsetY = -2;
+
+    this.ctx.fillStyle = fgColor;
+    this.ctx.font = '16px "Press Start 2P", monospace';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, 30);
+
+    // Draw button with hover state
+    if (this.restartHovered) {
+      this.ctx.fillStyle = this.skinConfig.filter ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+      this.ctx.fillRect(btnX, btnY + offsetY, btnW, btnH);
+    }
+    this.ctx.strokeStyle = fgColor;
+    this.ctx.lineWidth = this.restartHovered ? 3 : 2;
+    this.ctx.strokeRect(btnX, btnY + offsetY, btnW, btnH);
+
+    this.ctx.fillStyle = fgColor;
+    this.ctx.font = '8px "Press Start 2P", monospace';
+    this.ctx.fillText('PRESS SPACE', CANVAS_WIDTH / 2, btnY + 16 + offsetY);
+  }
+
+  // Check if a point (in canvas coords) is over the restart button
+  isPointOverRestartButton(canvasX: number, canvasY: number): boolean {
+    if (!this.restartButtonBounds) return false;
+    const { x, y, w, h } = this.restartButtonBounds;
+    return canvasX >= x && canvasX <= x + w && canvasY >= y && canvasY <= y + h;
+  }
+
+  setRestartHovered(hovered: boolean): void {
+    this.restartHovered = hovered;
+  }
+
+  setRestartPressed(pressed: boolean): void {
+    this.restartPressed = pressed;
+  }
+
+  clearRestartButtonState(): void {
+    this.restartButtonBounds = null;
+    this.restartHovered = false;
+    this.restartPressed = false;
   }
 
   renderStartScreen(skin: SkinType): void {
@@ -499,7 +524,6 @@ export class DinoGameRenderer {
     const bgColor = config.backgroundColor || '#FFFFFF';
     const fgColor = config.filter ? '#FFFFFF' : '#1A1A1A';
 
-    // Update skin if changed
     if (this.skin !== skin) {
       this.setSkin(skin);
     }
@@ -507,15 +531,12 @@ export class DinoGameRenderer {
     this.ctx.fillStyle = bgColor;
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw frost overlay for winter
-    if (this.winterEffects) {
-      this.winterEffects.renderFrostOverlay(this.ctx);
-    }
-
-    // Apply filter
     if (config.filter) {
       this.ctx.filter = config.filter;
     }
+
+    // Draw clouds
+    this.drawClouds(0);
 
     // Draw ground
     this.drawGround(0);
@@ -523,28 +544,20 @@ export class DinoGameRenderer {
     // Draw static dino
     if (this.spriteReady && this.spriteSheet) {
       const trexBase = this.spriteDef.TREX_BASE;
-      const frame = this.spriteDef.TREX.WAITING_1;
+      const frame = this.spriteDef.TREX.WAITING_2;
       this.ctx.drawImage(
         this.spriteSheet,
         trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
-        DINO_X, GROUND_Y, frame.w, frame.h
+        DINO_X, DINO_START_Y, frame.w, frame.h
       );
     } else {
-      this.drawDinoFallback(DINO_X, GROUND_Y, {
+      this.drawDinoFallback(DINO_X, DINO_START_Y, {
         isJumping: false,
         isDucking: false
       } as PlayerGameState);
     }
 
-    // Reset filter
     this.ctx.filter = 'none';
-
-    // Draw scarf for winter
-    if (this.winterEffects) {
-      this.winterEffects.renderDinoScarf(this.ctx, DINO_X, GROUND_Y, false);
-      this.winterEffects.update(0);
-      this.winterEffects.render(this.ctx);
-    }
 
     // Title
     this.ctx.fillStyle = fgColor;

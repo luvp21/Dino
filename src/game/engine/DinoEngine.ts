@@ -33,7 +33,8 @@ export class DinoEngine {
   }
 
   private createInitialState(): EngineGameState {
-    const groundYPos = ENGINE_CONFIG.CANVAS_HEIGHT - ENGINE_CONFIG.GROUND_HEIGHT - ENGINE_CONFIG.BOTTOM_PAD - TREX_CONFIG.HEIGHT;
+    // Dino stands with feet on ground line
+    const groundYPos = ENGINE_CONFIG.GROUND_Y - TREX_CONFIG.HEIGHT;
 
     return {
       tRex: {
@@ -346,12 +347,18 @@ export class DinoEngine {
     const obstacle = this.state.obstacles[0];
     const { tRex } = this.state;
 
+    // When ducking, the sprite is positioned lower (bottom stays on ground)
+    const tRexY = tRex.ducking 
+      ? tRex.y + (TREX_CONFIG.HEIGHT - TREX_CONFIG.DUCK_HEIGHT)
+      : tRex.y;
+    const tRexHeight = tRex.ducking ? TREX_CONFIG.DUCK_HEIGHT : TREX_CONFIG.HEIGHT;
+
     // Outer bounding box check
     const tRexBox = new CollisionBox(
       tRex.x + 1,
-      tRex.y + 1,
-      TREX_CONFIG.WIDTH - 2,
-      (tRex.ducking ? TREX_CONFIG.DUCK_HEIGHT : TREX_CONFIG.HEIGHT) - 2
+      tRexY + 1,
+      (tRex.ducking ? TREX_CONFIG.DUCK_WIDTH : TREX_CONFIG.WIDTH) - 2,
+      tRexHeight - 2
     );
 
     const obstacleBox = new CollisionBox(

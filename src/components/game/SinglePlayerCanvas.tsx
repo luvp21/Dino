@@ -143,6 +143,16 @@ export const SinglePlayerCanvas: React.FC<SinglePlayerCanvasProps> = ({ onGameOv
         const finalScore = engineRef.current.getScore();
         setScore(finalScore);
         onGameOver?.(finalScore);
+
+        // Render the exact collision frame (with GAME OVER overlay) before stopping
+        const finalState = convertEngineStateToGameState(
+          engineRef.current,
+          profile.id,
+          profile.username,
+          currentSkin
+        );
+        rendererRef.current.render(finalState, profile.id);
+
         awardCoins(finalScore).then((coins) => {
           if (coins > 0) {
             soundEngine.playCoin();
@@ -203,11 +213,44 @@ export const SinglePlayerCanvas: React.FC<SinglePlayerCanvasProps> = ({ onGameOv
     engineRef.current.processInput(engineAction);
   }, [profile, isRunning, gameOver, startGame]);
 
-  // Restart game
+  // Restart game (shows start screen)
   const restartGame = useCallback(() => {
     cancelAnimationFrame(animationFrameRef.current);
     initGame();
   }, [initGame]);
+
+  // Restart and immediately play (no start screen)
+  const restartAndPlay = useCallback(() => {
+    if (!canvasRef.current || !profile) return;
+
+    cancelAnimationFrame(animationFrameRef.current);
+
+    // Clear restart button state
+    if (rendererRef.current) {
+      rendererRef.current.clearRestartButtonState();
+    }
+
+    const seed = Date.now();
+    engineRef.current = new DinoEngine(seed);
+
+    if (!rendererRef.current) {
+      rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
+    } else {
+      rendererRef.current.setSkin(currentSkin);
+    }
+
+    setGameOver(false);
+    setScore(0);
+    setCoinsEarned(0);
+    setIsExpanded(true);
+
+    engineRef.current.start();
+    setIsRunning(true);
+    soundEngine.startMusic();
+    lastTimeRef.current = performance.now();
+    accumulatorRef.current = 0;
+    animationFrameRef.current = requestAnimationFrame(gameLoop);
+  }, [profile, currentSkin, gameLoop]);
 
   // Keyboard controls
   useEffect(() => {
@@ -215,7 +258,7 @@ export const SinglePlayerCanvas: React.FC<SinglePlayerCanvasProps> = ({ onGameOv
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         if (gameOver) {
-          restartGame();
+          restartAndPlay();
         } else {
           handleInput('jump');
         }
@@ -239,7 +282,7 @@ export const SinglePlayerCanvas: React.FC<SinglePlayerCanvasProps> = ({ onGameOv
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleInput, restartGame, gameOver]);
+  }, [handleInput, restartAndPlay, gameOver]);
 
   // Touch controls
   useEffect(() => {
@@ -253,7 +296,7 @@ export const SinglePlayerCanvas: React.FC<SinglePlayerCanvasProps> = ({ onGameOv
       const y = touch.clientY - rect.top;
 
       if (gameOver) {
-        restartGame();
+        restartAndPlay();
       } else if (y < rect.height / 2) {
         handleInput('jump');
       } else {
@@ -273,7 +316,100 @@ export const SinglePlayerCanvas: React.FC<SinglePlayerCanvasProps> = ({ onGameOv
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [handleInput, restartGame, gameOver]);
+  }, [handleInput, restartAndPlay, gameOver]);
+
+  // Mouse controls for restart button hover/click
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !rendererRef.current) return;
+
+    const getCanvasCoords = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = GAME_CONFIG.CANVAS_WIDTH / rect.width;
+      const scaleY = GAME_CONFIG.CANVAS_HEIGHT / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!gameOver || !rendererRef.current) return;
+      const { x, y } = getCanvasCoords(e);
+      const isOver = rendererRef.current.isPointOverRestartButton(x, y);
+      rendererRef.current.setRestartHovered(isOver);
+      canvas.style.cursor = isOver ? 'pointer' : 'default';
+      // Re-render to show hover state
+      if (engineRef.current && profile) {
+        const state = convertEngineStateToGameState(
+          engineRef.current,
+          profile.id,
+          profile.username,
+          currentSkin
+        );
+        rendererRef.current.render(state, profile.id);
+      }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!gameOver || !rendererRef.current) return;
+      const { x, y } = getCanvasCoords(e);
+      if (rendererRef.current.isPointOverRestartButton(x, y)) {
+        rendererRef.current.setRestartPressed(true);
+        // Re-render to show press state
+        if (engineRef.current && profile) {
+          const state = convertEngineStateToGameState(
+            engineRef.current,
+            profile.id,
+            profile.username,
+            currentSkin
+          );
+          rendererRef.current.render(state, profile.id);
+        }
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!gameOver || !rendererRef.current) return;
+      const { x, y } = getCanvasCoords(e);
+      const wasPressed = rendererRef.current.isPointOverRestartButton(x, y);
+      rendererRef.current.setRestartPressed(false);
+      if (wasPressed) {
+        rendererRef.current.clearRestartButtonState();
+        canvas.style.cursor = 'default';
+        restartAndPlay();
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (!rendererRef.current) return;
+      rendererRef.current.setRestartHovered(false);
+      rendererRef.current.setRestartPressed(false);
+      canvas.style.cursor = 'default';
+      // Re-render to clear hover state
+      if (gameOver && engineRef.current && profile) {
+        const state = convertEngineStateToGameState(
+          engineRef.current,
+          profile.id,
+          profile.username,
+          currentSkin
+        );
+        rendererRef.current.render(state, profile.id);
+      }
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [gameOver, profile, currentSkin, restartAndPlay]);
 
   // Initialize on mount
   useEffect(() => {

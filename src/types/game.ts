@@ -126,31 +126,35 @@ export const GAME_CONFIG = {
   // Canvas
   CANVAS_WIDTH: 800,
   CANVAS_HEIGHT: 200,
-  
+
   // Physics
   GRAVITY: 0.6,
   JUMP_VELOCITY: -12,
   MAX_FALL_VELOCITY: 15,
-  
-  // Dino
+
+  // Dino (matches official Chrome sprite dimensions)
   DINO_WIDTH: 44,
   DINO_HEIGHT: 47,
-  DINO_DUCK_HEIGHT: 25,
+  DINO_DUCK_WIDTH: 59,
+  DINO_DUCK_HEIGHT: 26,
   DINO_X: 50,
-  GROUND_Y: 131, // CANVAS_HEIGHT(200) - GROUND_HEIGHT(12) - BOTTOM_PAD(10) - DINO_HEIGHT(47)
-  
+
+  // Ground positioning - ground line where sprite feet touch
+  GROUND_Y: 182, // Visual baseline (closer to bottom)
+  DINO_START_Y: 145, // GROUND_Y - DINO_HEIGHT = 182 - 47 = 135
+
   // Game
   INITIAL_SPEED: 6,
   MAX_SPEED: 13,
   SPEED_INCREMENT: 0.001,
-  
+
   // Obstacles
   MIN_OBSTACLE_GAP: 100,
   MAX_OBSTACLE_GAP: 250,
-  
+
   // Scoring
   SCORE_PER_FRAME: 0.1,
-  
+
   // Multiplayer
   TICK_RATE: 60, // frames per second
   INPUT_DELAY: 2, // frames of input delay for sync
@@ -159,11 +163,11 @@ export const GAME_CONFIG = {
 // Seeded Random Number Generator
 export class SeededRNG {
   private seed: number;
-  
+
   constructor(seed: number) {
     this.seed = seed;
   }
-  
+
   // Mulberry32 PRNG
   next(): number {
     let t = this.seed += 0x6D2B79F5;
@@ -171,15 +175,15 @@ export class SeededRNG {
     t ^= t + Math.imul(t ^ t >>> 7, t | 61);
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   }
-  
+
   range(min: number, max: number): number {
     return min + this.next() * (max - min);
   }
-  
+
   intRange(min: number, max: number): number {
     return Math.floor(this.range(min, max + 1));
   }
-  
+
   choice<T>(array: T[]): T {
     return array[this.intRange(0, array.length - 1)];
   }

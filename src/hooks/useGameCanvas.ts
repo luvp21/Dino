@@ -144,6 +144,16 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
         const finalScore = engineRef.current.getScore();
         setScore(finalScore);
         options.onGameOver?.(finalScore);
+        
+        // IMPORTANT: Render the final collision frame before stopping
+        const finalState = convertEngineStateToGameState(
+          engineRef.current,
+          profile.id,
+          profile.username,
+          currentSkin
+        );
+        rendererRef.current.render(finalState, profile.id);
+        
         // Award coins for distance traveled
         awardCoins(finalScore).then((coins) => {
           if (coins > 0) {
@@ -207,11 +217,44 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     engineRef.current.processInput(engineAction);
   }, [profile, isRunning, gameOver, startGame]);
 
-  // Restart game
+  // Restart game (shows start screen)
   const restartGame = useCallback(() => {
     cancelAnimationFrame(animationFrameRef.current);
     initGame();
   }, [initGame]);
+
+  // Restart and immediately start playing (no start screen)
+  const restartAndPlay = useCallback(() => {
+    if (!canvasRef.current || !profile) return;
+    
+    cancelAnimationFrame(animationFrameRef.current);
+    
+    // Clear restart button state
+    if (rendererRef.current) {
+      rendererRef.current.clearRestartButtonState();
+    }
+    
+    const seed = Date.now();
+    engineRef.current = new DinoEngine(seed);
+    
+    if (!rendererRef.current) {
+      rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
+    } else {
+      rendererRef.current.setSkin(currentSkin);
+    }
+
+    setGameOver(false);
+    setScore(0);
+    setCoinsEarned(0);
+    
+    // Start immediately
+    engineRef.current.start();
+    setIsRunning(true);
+    soundEngine.startMusic();
+    lastTimeRef.current = performance.now();
+    accumulatorRef.current = 0;
+    animationFrameRef.current = requestAnimationFrame(gameLoop);
+  }, [profile, currentSkin, gameLoop]);
 
   // Keyboard controls
   useEffect(() => {
@@ -219,7 +262,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         if (gameOver) {
-          restartGame();
+          restartAndPlay(); // Restart directly into gameplay
         } else {
           handleInput('jump');
         }
@@ -243,7 +286,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleInput, restartGame, gameOver]);
+  }, [handleInput, restartAndPlay, gameOver]);
 
   // Touch controls
   useEffect(() => {
@@ -257,7 +300,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       const y = touch.clientY - rect.top;
       
       if (gameOver) {
-        restartGame();
+        restartAndPlay();
       } else if (y < rect.height / 2) {
         handleInput('jump');
       } else {
@@ -277,7 +320,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [handleInput, restartGame, gameOver]);
+  }, [handleInput, restartAndPlay, gameOver]);
 
   // Initialize on mount
   useEffect(() => {

@@ -87,7 +87,7 @@ const SkinPreview: React.FC<{ skin: SkinType; isActive: boolean }> = ({ skin, is
     <canvas
       ref={canvasRef}
       className={`w-full h-auto ${isActive ? 'ring-4 ring-foreground' : ''}`}
-      style={{
+      style={{ 
         aspectRatio: '800/200',
         imageRendering: 'pixelated',
       }}

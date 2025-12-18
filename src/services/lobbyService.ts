@@ -20,7 +20,7 @@ export async function submitGameResult(
       placement,
       seed,
     });
-
+    
     if (error) {
       console.error('Failed to submit game result:', error);
     }
@@ -86,27 +86,27 @@ export class GameWebSocket {
   connect(_lobbyId: string, _profileId: string, _callbacks: any): void {
     console.warn('Multiplayer is currently disabled');
   }
-
+  
   disconnect(): void {
     console.warn('Multiplayer is currently disabled');
   }
-
+  
   send(_data: any): void {
     console.warn('Multiplayer is currently disabled');
   }
-
+  
   sendReady(_ready: boolean): void {
     console.warn('Multiplayer is currently disabled');
   }
-
+  
   sendStart(): void {
     console.warn('Multiplayer is currently disabled');
   }
-
+  
   sendInput(_input: any): void {
     console.warn('Multiplayer is currently disabled');
   }
-
+  
   sendGameOver(_score: number): void {
     console.warn('Multiplayer is currently disabled');
   }

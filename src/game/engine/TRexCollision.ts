@@ -14,13 +14,14 @@ export const TREX_COLLISION_BOXES = {
     new CollisionBox(9, 34, 15, 4),
   ],
   DUCKING: [
-    new CollisionBox(1, 18, 55, 25),
+    new CollisionBox(1, 0, 55, 26),
   ],
 };
 
 export const TREX_CONFIG = {
   WIDTH: 44,
   HEIGHT: 47,
-  DUCK_HEIGHT: 25,
+  DUCK_WIDTH: 59,
+  DUCK_HEIGHT: 26,
   START_X: 50,
 };

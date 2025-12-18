@@ -19,22 +19,22 @@ const HomePage: React.FC = () => {
 
   const handleGameOver = async (score: number) => {
     setLastScore(score);
-    
+
     if (profile) {
       const newBestDistance = Math.max(profile.bestDistance, score);
       const newTotalMatches = profile.totalMatches + 1;
       const newAverageDistance = Math.floor(
         ((profile.averageDistance * profile.totalMatches) + score) / newTotalMatches
       );
-      
+
       setIsNewHighScore(score > profile.bestDistance);
-      
+
       updateProfile({
         bestDistance: newBestDistance,
         totalMatches: newTotalMatches,
         averageDistance: newAverageDistance,
       });
-      
+
       // Submit to database
       if (profileId) {
         await submitGameResult(
@@ -84,7 +84,7 @@ const HomePage: React.FC = () => {
       )}
 
       {/* Action Buttons */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+      {/* <div className="flex flex-col md:flex-row items-center justify-center gap-4">
         <PixelButton
           size="lg"
           onClick={() => navigate('/lobby')}
@@ -98,7 +98,7 @@ const HomePage: React.FC = () => {
         >
           LEADERBOARD
         </PixelButton>
-      </div>
+      </div> */}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
@@ -117,7 +117,7 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Multiplayer Info */}
-      <PixelCard className="max-w-md mx-auto text-center">
+      {/* <PixelCard className="max-w-md mx-auto text-center">
         <PixelCardHeader>
           <PixelCardTitle>MULTIPLAYER MODE</PixelCardTitle>
         </PixelCardHeader>
@@ -133,7 +133,7 @@ const HomePage: React.FC = () => {
             SKINS
           </PixelButton>
         </div>
-      </PixelCard>
+      </PixelCard> */}
     </div>
   );
 };

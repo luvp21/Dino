@@ -23,14 +23,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, className })
           maxHeight: '280px',
         }}
       />
-      
+
       {/* Sound controls */}
-      <div className="absolute top-2 right-2">
+      <div className="absolute top-2 left-2">
         <SoundControls />
       </div>
 
       {/* Current skin indicator */}
-      <div className="absolute top-2 left-2 text-[8px] text-muted-foreground">
+      <div className="absolute bottom-2 left-2 text-[8px] text-muted-foreground">
         SKIN: {currentSkin.toUpperCase()}
       </div>
 
@@ -40,7 +40,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, className })
           +{coinsEarned} COINS
         </div>
       )}
-      
+
       {/* Mobile controls hint */}
       <div className="mt-4 text-center text-muted-foreground text-[8px] md:text-[10px]">
         <p>KEYBOARD: SPACE/UP = JUMP | DOWN = DUCK</p>

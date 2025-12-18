@@ -19,14 +19,15 @@ export interface ObstacleTypeConfig {
   speedOffset?: number;
 }
 
-const groundY = ENGINE_CONFIG.CANVAS_HEIGHT - ENGINE_CONFIG.GROUND_HEIGHT - ENGINE_CONFIG.BOTTOM_PAD;
+// Ground Y is where the ground line is drawn (obstacles sit ON this line)
+const groundY = ENGINE_CONFIG.GROUND_Y;
 
 export const OBSTACLE_TYPES: ObstacleTypeConfig[] = [
   {
     type: 'CACTUS_SMALL',
     width: 17,
     height: 35,
-    yPos: groundY - 35,
+    yPos: groundY - 35, // Bottom of cactus on ground
     multipleSpeed: 4,
     minGap: 120,
     minSpeed: 0,
