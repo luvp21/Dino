@@ -1,151 +1,103 @@
 // =============================================
-// DINO GAME RENDERER
-// Pixel-perfect canvas rendering
-// Supports multiple skins/themes & multiplayer
+// DINO GAME RENDERER - SPRITE-BASED
+// Uses Chrome's offline-sprite.png for authentic rendering
+// Supports multiple skins via CSS filters + special effects
 // =============================================
 
 import { GAME_CONFIG, type GameState, type PlayerGameState, type Obstacle, type SkinType } from '@/types/game';
+import { SpriteLoader } from './sprites/SpriteLoader';
+import { getSkinConfig, getSpriteDefinition, type SkinConfig } from './sprites/SkinConfig';
+import type { SpriteDefinition, SpriteCoords } from './sprites/SpriteDefinitions';
+import { WinterEffects } from './effects/WinterEffects';
 
 const { CANVAS_WIDTH, CANVAS_HEIGHT, DINO_X, DINO_WIDTH, DINO_HEIGHT, DINO_DUCK_HEIGHT, GROUND_Y } = GAME_CONFIG;
 
-interface SkinColors {
-  background: string;
-  foreground: string;
-  ground: string;
-  dino: string;
-  obstacle: string;
-}
-
-// Distinct colors for multiplayer dinos
-const PLAYER_COLORS = [
-  '#00FF00', // Green (Player 1 / Local)
-  '#FF6B6B', // Red
-  '#4ECDC4', // Cyan
-  '#FFE66D', // Yellow
-  '#95E1D3', // Mint
-  '#F38181', // Coral
-  '#AA96DA', // Purple
-  '#FCBAD3', // Pink
-];
-
-const SKIN_COLORS: Record<SkinType, SkinColors> = {
-  classic: {
-    background: '#FFFFFF',
-    foreground: '#1A1A1A',
-    ground: '#737373',
-    dino: '#262626',
-    obstacle: '#333333',
-  },
-  inverted: {
-    background: '#1A1A1A',
-    foreground: '#F2F2F2',
-    ground: '#666666',
-    dino: '#F2F2F2',
-    obstacle: '#CCCCCC',
-  },
-  phosphor: {
-    background: '#001A00',
-    foreground: '#00FF00',
-    ground: '#004400',
-    dino: '#00FF00',
-    obstacle: '#00CC00',
-  },
-  amber: {
-    background: '#1A0D00',
-    foreground: '#FFBF00',
-    ground: '#4D2600',
-    dino: '#FFBF00',
-    obstacle: '#CC9900',
-  },
-  crt: {
-    background: '#141414',
-    foreground: '#D9D9D9',
-    ground: '#404040',
-    dino: '#D9D9D9',
-    obstacle: '#B3B3B3',
-  },
-  winter: {
-    background: '#0A1929',
-    foreground: '#81D4FA',
-    ground: '#1E3A5F',
-    dino: '#4FC3F7',
-    obstacle: '#29B6F6',
-  },
-  neon: {
-    background: '#0D0D0D',
-    foreground: '#FF00FF',
-    ground: '#1A1A2E',
-    dino: '#00FFFF',
-    obstacle: '#FF00FF',
-  },
-  golden: {
-    background: '#1A1500',
-    foreground: '#FFD700',
-    ground: '#3D3200',
-    dino: '#FFC107',
-    obstacle: '#FFB300',
-  },
-};
-
-// Skin-specific player colors for better contrast
-const SKIN_PLAYER_COLORS: Record<SkinType, string[]> = {
-  classic: ['#2ECC71', '#E74C3C', '#3498DB', '#F1C40F'],
-  inverted: ['#2ECC71', '#E74C3C', '#3498DB', '#F1C40F'],
-  phosphor: ['#00FF00', '#00FFFF', '#FFFF00', '#FF00FF'],
-  amber: ['#FFBF00', '#FF6600', '#FFFF00', '#FF9900'],
-  crt: ['#00FF00', '#FF6B6B', '#00FFFF', '#FFFF00'],
-  winter: ['#4FC3F7', '#81D4FA', '#B3E5FC', '#E1F5FE'],
-  neon: ['#00FFFF', '#FF00FF', '#FFFF00', '#00FF00'],
-  golden: ['#FFD700', '#FFC107', '#FFEB3B', '#FFB300'],
-};
+// Player colors for multiplayer (future use)
+const PLAYER_COLORS = ['#2ECC71', '#E74C3C', '#3498DB', '#F1C40F'];
 
 export class DinoGameRenderer {
   private ctx: CanvasRenderingContext2D;
   private skin: SkinType;
+  private skinConfig: SkinConfig;
+  private spriteDef: SpriteDefinition;
+  private spriteSheet: HTMLImageElement | null = null;
+  private spriteReady: boolean = false;
+
   private groundOffset: number = 0;
   private runFrame: number = 0;
   private pterodactylFrame: number = 0;
   private playerColorMap: Map<string, string> = new Map();
 
+  // Special effects
+  private winterEffects: WinterEffects | null = null;
+  private frameCount: number = 0;
+
   constructor(canvas: HTMLCanvasElement, skin: SkinType = 'classic') {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get canvas context');
-    
+
     this.ctx = ctx;
     this.skin = skin;
-    
+    this.skinConfig = getSkinConfig(skin);
+    this.spriteDef = getSpriteDefinition(skin, false); // Use LDPI for now
+
     // Set canvas size
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-    
+
     // Enable pixel-perfect rendering
     ctx.imageSmoothingEnabled = false;
+
+    // Load sprite sheet
+    this.loadSprite();
+
+    // Initialize special effects for winter skin
+    if (skin === 'winter') {
+      this.winterEffects = new WinterEffects(CANVAS_WIDTH, CANVAS_HEIGHT, GROUND_Y + DINO_HEIGHT + 5);
+    }
+  }
+
+  private async loadSprite(): Promise<void> {
+    try {
+      this.spriteSheet = await SpriteLoader.load(this.skinConfig.spriteSheet);
+      this.spriteReady = true;
+    } catch (err) {
+      console.error('Failed to load sprite sheet:', err);
+      this.spriteReady = false;
+    }
   }
 
   setSkin(skin: SkinType): void {
     this.skin = skin;
+    this.skinConfig = getSkinConfig(skin);
+    this.spriteDef = getSpriteDefinition(skin, false);
+    this.loadSprite();
+
+    // Initialize/clear winter effects
+    if (skin === 'winter') {
+      this.winterEffects = new WinterEffects(CANVAS_WIDTH, CANVAS_HEIGHT, GROUND_Y + DINO_HEIGHT + 5);
+    } else {
+      this.winterEffects = null;
+    }
   }
 
-  private getPlayerColor(playerId: string, playerIndex: number, isLocal: boolean): string {
-    // Check if already assigned
+  private getPlayerColor(playerId: string, playerIndex: number): string {
     if (this.playerColorMap.has(playerId)) {
       return this.playerColorMap.get(playerId)!;
     }
-    
-    // Assign color based on index
-    const skinColors = SKIN_PLAYER_COLORS[this.skin];
-    const color = skinColors[playerIndex % skinColors.length];
+    const color = PLAYER_COLORS[playerIndex % PLAYER_COLORS.length];
     this.playerColorMap.set(playerId, color);
     return color;
   }
 
   render(state: GameState, localPlayerId?: string): void {
-    const colors = SKIN_COLORS[this.skin];
-    
+    const bgColor = this.skinConfig.backgroundColor || '#FFFFFF';
+    this.frameCount++;
+
     // Clear canvas
-    this.ctx.fillStyle = colors.background;
+    this.ctx.fillStyle = bgColor;
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
+
     // Update animation frames
     this.groundOffset = (this.groundOffset + state.speed) % 24;
     if (state.frame % 6 === 0) {
@@ -154,582 +106,453 @@ export class DinoGameRenderer {
     if (state.frame % 10 === 0) {
       this.pterodactylFrame = (this.pterodactylFrame + 1) % 2;
     }
-    
-    // Draw ground
-    this.drawGround(colors, state.distance);
-    
+
+    // Update winter effects if active
+    if (this.winterEffects) {
+      this.winterEffects.update(state.speed);
+    }
+
+    // Draw frost overlay first (background layer)
+    if (this.winterEffects) {
+      this.winterEffects.renderFrostOverlay(this.ctx);
+    }
+
+    // Apply skin filter if set
+    if (this.skinConfig.filter) {
+      this.ctx.filter = this.skinConfig.filter;
+    }
+
+    // Draw ground/horizon
+    this.drawGround(state.distance);
+
     // Draw obstacles
     state.obstacles.forEach(obstacle => {
-      this.drawObstacle(obstacle, colors);
+      this.drawObstacle(obstacle);
     });
-    
-    // Assign colors to players
+
+    // Reset filter before drawing dinos (so scarf colors are correct)
+    this.ctx.filter = 'none';
+
+    // Draw players
     const localPlayerIndex = state.players.findIndex(p => p.id === localPlayerId);
     state.players.forEach((player, index) => {
       const isLocal = player.id === localPlayerId;
-      // Local player always gets index 0 color
       const colorIndex = isLocal ? 0 : (index < localPlayerIndex ? index + 1 : index);
-      this.getPlayerColor(player.id, colorIndex, isLocal);
+      this.getPlayerColor(player.id, colorIndex);
     });
-    
-    // Draw players (local player on top)
+
     const sortedPlayers = [...state.players].sort((a, b) => {
       if (a.id === localPlayerId) return 1;
       if (b.id === localPlayerId) return -1;
       return 0;
     });
-    
+
     sortedPlayers.forEach((player, drawIndex) => {
       const isLocal = player.id === localPlayerId;
-      const playerColor = this.playerColorMap.get(player.id) || colors.dino;
-      this.drawDino(player, colors, playerColor, isLocal, drawIndex);
+
+      // Apply filter for dino sprite
+      if (this.skinConfig.filter) {
+        this.ctx.filter = this.skinConfig.filter;
+      }
+
+      this.drawDino(player, isLocal, drawIndex);
+
+      // Reset filter and draw winter accessories
+      this.ctx.filter = 'none';
+
+      if (this.winterEffects && player.isAlive) {
+        const x = DINO_X + drawIndex * 8;
+        const y = player.y;
+        this.winterEffects.renderDinoScarf(this.ctx, x, y, player.isDucking);
+        if (!player.isDucking) {
+          this.winterEffects.renderBreathVapor(this.ctx, x, y, this.frameCount);
+        }
+      }
     });
-    
-    // Draw player legend (top left)
-    this.drawPlayerLegend(state.players, colors, localPlayerId);
-    
-    // Draw HI score (top right)
-    this.drawHiScore(state, colors);
-    
-    // Draw game over if applicable
+
+    // Draw snowflakes on top
+    if (this.winterEffects) {
+      this.winterEffects.render(this.ctx);
+    }
+
+    // Draw HI score
+    this.drawHiScore(state);
+
+    // Draw game over
     if (state.isGameOver) {
-      this.drawGameOver(colors);
+      this.drawGameOver();
     }
   }
 
-  private drawGround(colors: SkinColors, distance: number): void {
+  private drawGround(distance: number): void {
+    if (!this.spriteReady || !this.spriteSheet) {
+      this.drawGroundFallback(distance);
+      return;
+    }
+
+    const horizon = this.spriteDef.HORIZON;
     const y = GROUND_Y + DINO_HEIGHT + 5;
-    
-    // Main ground line - thicker for better visibility
-    this.ctx.fillStyle = colors.ground;
+    const offset = Math.floor(distance * 0.5) % horizon.w;
+
+    // Draw scrolling horizon line
+    // First segment
+    const firstWidth = Math.min(horizon.w - offset, CANVAS_WIDTH);
+    this.ctx.drawImage(
+      this.spriteSheet,
+      horizon.x + offset, horizon.y, firstWidth, horizon.h,
+      0, y, firstWidth, horizon.h
+    );
+
+    // Second segment (wraps around)
+    if (firstWidth < CANVAS_WIDTH) {
+      this.ctx.drawImage(
+        this.spriteSheet,
+        horizon.x, horizon.y, CANVAS_WIDTH - firstWidth, horizon.h,
+        firstWidth, y, CANVAS_WIDTH - firstWidth, horizon.h
+      );
+    }
+
+    // Draw clouds
+    this.drawClouds(distance);
+  }
+
+  private drawGroundFallback(distance: number): void {
+    const y = GROUND_Y + DINO_HEIGHT + 5;
+    this.ctx.fillStyle = this.skinConfig.groundColor || '#737373';
     this.ctx.fillRect(0, y, CANVAS_WIDTH, 2);
-    
-    // Scrolling ground texture with varied elements
+
+    // Ground texture
     const offset = Math.floor(distance * 0.5) % 600;
-    
-    // Draw varied ground bumps and details
     for (let i = 0; i < CANVAS_WIDTH + 100; i += 3) {
       const worldX = i + offset;
       const hash = (worldX * 2654435761) >>> 0;
       const random = (hash % 100) / 100;
-      
       const drawX = i - (offset % 600);
-      
-      if (random < 0.08) {
-        // Large rock
-        this.ctx.fillRect(drawX, y + 4, 4, 3);
-        this.ctx.fillRect(drawX + 1, y + 3, 2, 1);
-      } else if (random < 0.15) {
-        // Medium bump
-        this.ctx.fillRect(drawX, y + 4, 3, 2);
-      } else if (random < 0.25) {
-        // Small dot
-        this.ctx.fillRect(drawX, y + 5, 2, 1);
-      } else if (random < 0.30) {
-        // Tiny speck
-        this.ctx.fillRect(drawX, y + 6, 1, 1);
+
+      if (random < 0.15) {
+        this.ctx.fillRect(drawX, y + 4, 2 + Math.floor(random * 3), 2);
       }
     }
-    
-    // Additional horizon details
-    this.ctx.globalAlpha = 0.3;
-    for (let i = 0; i < CANVAS_WIDTH; i += 80) {
-      const hillX = (i - (offset * 0.1) % CANVAS_WIDTH + CANVAS_WIDTH) % CANVAS_WIDTH;
-      // Distant hills silhouette
-      this.ctx.fillRect(hillX, y - 2, 30, 2);
-      this.ctx.fillRect(hillX + 5, y - 4, 20, 2);
-      this.ctx.fillRect(hillX + 10, y - 6, 10, 2);
-    }
-    this.ctx.globalAlpha = 1;
   }
 
-  private drawDino(
-    player: PlayerGameState, 
-    skinColors: SkinColors, 
-    playerColor: string,
-    isLocal: boolean, 
-    drawIndex: number
-  ): void {
-    if (!player.isAlive) {
-      this.drawDeadDino(player, skinColors, playerColor, drawIndex);
-      return;
-    }
+  private drawClouds(distance: number): void {
+    if (!this.spriteReady || !this.spriteSheet) return;
 
-    // Offset each player slightly so they don't overlap completely
-    const xOffset = drawIndex * 8;
-    const x = DINO_X + xOffset;
-    const y = player.y;
-    
-    // Use distinct player color
-    const alpha = isLocal ? 1 : 0.85;
-    
-    if (player.isDucking) {
-      this.drawDuckingDino(x, y + (DINO_HEIGHT - DINO_DUCK_HEIGHT), skinColors, playerColor, alpha);
-    } else if (player.isJumping) {
-      this.drawJumpingDino(x, y, skinColors, playerColor, alpha);
-    } else {
-      this.drawRunningDino(x, y, skinColors, playerColor, alpha);
-    }
-    
-    // Draw player indicator above dino (colored dot + name)
-    const indicatorY = Math.min(y - 15, GROUND_Y - 60);
-    
-    // Colored dot
-    this.ctx.fillStyle = playerColor;
-    this.ctx.beginPath();
-    this.ctx.arc(x + DINO_WIDTH / 2 - 20, indicatorY + 3, 4, 0, Math.PI * 2);
-    this.ctx.fill();
-    
-    // Name
-    this.ctx.fillStyle = skinColors.foreground;
-    this.ctx.font = '7px "Press Start 2P", monospace';
-    this.ctx.textAlign = 'left';
-    this.ctx.fillText(player.username.substring(0, 6).toUpperCase(), x + DINO_WIDTH / 2 - 12, indicatorY + 6);
-    
-    // Local player arrow indicator
-    if (isLocal) {
-      this.ctx.fillStyle = playerColor;
-      this.ctx.font = '10px "Press Start 2P", monospace';
-      this.ctx.fillText('▼', x + DINO_WIDTH / 2 - 5, indicatorY - 5);
-    }
-  }
+    const cloud = this.spriteDef.CLOUD;
+    const offset = Math.floor(distance * 0.2) % (CANVAS_WIDTH * 2);
 
-  private drawRunningDino(x: number, y: number, skinColors: SkinColors, dinoColor: string, alpha: number): void {
-    const c = this.ctx;
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    
-    // Head - more detailed T-Rex shape
-    c.fillRect(x + 30, y - 2, 14, 18);  // Main head
-    c.fillRect(x + 26, y + 2, 6, 12);   // Back of head
-    c.fillRect(x + 38, y + 4, 6, 8);    // Snout
-    c.fillRect(x + 42, y + 8, 4, 4);    // Nose tip
-    
-    // Eye socket (cutout)
-    c.fillStyle = this.adjustAlpha(skinColors.background, alpha);
-    c.fillRect(x + 36, y + 2, 4, 4);
-    
-    // Eye pupil
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    c.fillRect(x + 37, y + 3, 2, 2);
-    
-    // Mouth line
-    c.fillStyle = this.adjustAlpha(skinColors.background, alpha);
-    c.fillRect(x + 38, y + 10, 8, 1);
-    
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    
-    // Body - chunky T-Rex torso
-    c.fillRect(x + 14, y + 14, 24, 22);  // Main body
-    c.fillRect(x + 10, y + 18, 6, 14);   // Body extension
-    c.fillRect(x + 34, y + 16, 6, 12);   // Chest
-    
-    // Arms - tiny T-Rex arms
-    c.fillRect(x + 34, y + 22, 8, 4);
-    c.fillRect(x + 40, y + 24, 3, 4);
-    
-    // Tail - segmented
-    c.fillRect(x + 4, y + 18, 12, 10);
-    c.fillRect(x, y + 20, 6, 6);
-    c.fillRect(x - 4, y + 22, 6, 4);
-    
-    // Legs (animated) - more detailed
-    if (this.runFrame === 0) {
-      // Left leg forward
-      c.fillRect(x + 16, y + 36, 8, 6);
-      c.fillRect(x + 14, y + 42, 10, 4);
-      c.fillRect(x + 12, y + 46, 8, 4);
-      // Right leg back
-      c.fillRect(x + 28, y + 36, 8, 4);
-      c.fillRect(x + 30, y + 40, 6, 6);
-    } else {
-      // Left leg back
-      c.fillRect(x + 16, y + 36, 8, 4);
-      c.fillRect(x + 18, y + 40, 6, 6);
-      // Right leg forward
-      c.fillRect(x + 28, y + 36, 8, 6);
-      c.fillRect(x + 26, y + 42, 10, 4);
-      c.fillRect(x + 28, y + 46, 8, 4);
-    }
-  }
+    // Draw a few clouds at different positions
+    const cloudPositions = [
+      { x: 100 - offset % CANVAS_WIDTH, y: 30 },
+      { x: 350 - offset % CANVAS_WIDTH, y: 50 },
+      { x: 550 - offset % CANVAS_WIDTH, y: 20 },
+    ];
 
-  private drawJumpingDino(x: number, y: number, skinColors: SkinColors, dinoColor: string, alpha: number): void {
-    const c = this.ctx;
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    
-    // Head - same as running
-    c.fillRect(x + 30, y - 2, 14, 18);
-    c.fillRect(x + 26, y + 2, 6, 12);
-    c.fillRect(x + 38, y + 4, 6, 8);
-    c.fillRect(x + 42, y + 8, 4, 4);
-    
-    // Eye socket
-    c.fillStyle = this.adjustAlpha(skinColors.background, alpha);
-    c.fillRect(x + 36, y + 2, 4, 4);
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    c.fillRect(x + 37, y + 3, 2, 2);
-    
-    // Mouth
-    c.fillStyle = this.adjustAlpha(skinColors.background, alpha);
-    c.fillRect(x + 38, y + 10, 8, 1);
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    
-    // Body
-    c.fillRect(x + 14, y + 14, 24, 22);
-    c.fillRect(x + 10, y + 18, 6, 14);
-    c.fillRect(x + 34, y + 16, 6, 12);
-    
-    // Arms
-    c.fillRect(x + 34, y + 22, 8, 4);
-    c.fillRect(x + 40, y + 24, 3, 4);
-    
-    // Tail
-    c.fillRect(x + 4, y + 18, 12, 10);
-    c.fillRect(x, y + 20, 6, 6);
-    c.fillRect(x - 4, y + 22, 6, 4);
-    
-    // Legs (tucked for jump)
-    c.fillRect(x + 16, y + 36, 8, 6);
-    c.fillRect(x + 18, y + 42, 6, 4);
-    c.fillRect(x + 28, y + 36, 8, 6);
-    c.fillRect(x + 30, y + 42, 6, 4);
-  }
+    cloudPositions.forEach(pos => {
+      let x = pos.x;
+      if (x < -cloud.w) x += CANVAS_WIDTH + cloud.w * 2;
+      if (x > CANVAS_WIDTH) return;
 
-  private drawDuckingDino(x: number, y: number, skinColors: SkinColors, dinoColor: string, alpha: number): void {
-    const c = this.ctx;
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    
-    // Stretched body for ducking
-    c.fillRect(x, y + 4, 50, 14);
-    c.fillRect(x - 4, y + 6, 8, 10);
-    
-    // Head - flattened
-    c.fillRect(x + 44, y, 14, 14);
-    c.fillRect(x + 54, y + 4, 6, 6);
-    c.fillRect(x + 58, y + 6, 4, 4);
-    
-    // Eye
-    c.fillStyle = this.adjustAlpha(skinColors.background, alpha);
-    c.fillRect(x + 52, y + 2, 3, 3);
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    c.fillRect(x + 53, y + 3, 1, 1);
-    
-    // Mouth
-    c.fillStyle = this.adjustAlpha(skinColors.background, alpha);
-    c.fillRect(x + 54, y + 8, 8, 1);
-    c.fillStyle = this.adjustAlpha(dinoColor, alpha);
-    
-    // Tail
-    c.fillRect(x - 8, y + 8, 10, 6);
-    c.fillRect(x - 12, y + 10, 6, 4);
-    
-    // Legs (animated)
-    if (this.runFrame === 0) {
-      c.fillRect(x + 10, y + 18, 6, 6);
-      c.fillRect(x + 8, y + 24, 6, 3);
-      c.fillRect(x + 30, y + 18, 6, 4);
-    } else {
-      c.fillRect(x + 10, y + 18, 6, 4);
-      c.fillRect(x + 30, y + 18, 6, 6);
-      c.fillRect(x + 28, y + 24, 6, 3);
-    }
-  }
-
-  private drawDeadDino(player: PlayerGameState, skinColors: SkinColors, playerColor: string, drawIndex: number): void {
-    const x = DINO_X + drawIndex * 8;
-    const y = GROUND_Y;
-    const c = this.ctx;
-    
-    c.fillStyle = this.adjustAlpha(playerColor, 0.4);
-    
-    // Body - same as jumping but faded
-    c.fillRect(x + 14, y + 14, 24, 22);
-    c.fillRect(x + 30, y - 2, 14, 18);
-    c.fillRect(x + 26, y + 2, 6, 12);
-    c.fillRect(x + 38, y + 4, 6, 8);
-    
-    // X eyes
-    c.fillStyle = this.adjustAlpha(skinColors.foreground, 0.6);
-    c.fillRect(x + 35, y + 1, 2, 2);
-    c.fillRect(x + 37, y + 3, 2, 2);
-    c.fillRect(x + 37, y + 1, 2, 2);
-    c.fillRect(x + 35, y + 3, 2, 2);
-    
-    // Tail and legs
-    c.fillStyle = this.adjustAlpha(playerColor, 0.4);
-    c.fillRect(x + 4, y + 18, 12, 10);
-    c.fillRect(x + 16, y + 36, 8, 12);
-    c.fillRect(x + 28, y + 36, 8, 12);
-    
-    // Dead indicator
-    c.fillStyle = this.adjustAlpha('#FF0000', 0.7);
-    c.font = '10px "Press Start 2P", monospace';
-    c.textAlign = 'center';
-    c.fillText('☠', x + DINO_WIDTH / 2, y - 15);
-  }
-
-  private drawObstacle(obstacle: Obstacle, colors: SkinColors): void {
-    switch (obstacle.type) {
-      case 'cactus-small':
-        this.drawSmallCactus(obstacle.x, obstacle.y, colors);
-        break;
-      case 'cactus-large':
-        this.drawLargeCactus(obstacle.x, obstacle.y, colors);
-        break;
-      case 'cactus-group':
-        this.drawCactusGroup(obstacle.x, obstacle.y, colors);
-        break;
-      case 'pterodactyl':
-        this.drawPterodactyl(obstacle.x, obstacle.y, colors);
-        break;
-    }
-  }
-
-  private drawSmallCactus(x: number, y: number, colors: SkinColors): void {
-    const c = this.ctx;
-    c.fillStyle = colors.obstacle;
-    
-    // Main stem with detail
-    c.fillRect(x + 5, y + 2, 8, 33);
-    c.fillRect(x + 4, y + 5, 10, 28);
-    
-    // Left arm
-    c.fillRect(x, y + 10, 6, 4);
-    c.fillRect(x - 2, y + 8, 4, 10);
-    c.fillRect(x - 2, y + 6, 3, 4);
-    
-    // Right arm
-    c.fillRect(x + 12, y + 16, 6, 4);
-    c.fillRect(x + 16, y + 12, 4, 10);
-    c.fillRect(x + 17, y + 10, 3, 4);
-    
-    // Top spikes
-    c.fillRect(x + 6, y, 2, 3);
-    c.fillRect(x + 10, y, 2, 3);
-    
-    // Texture lines
-    c.fillStyle = this.adjustAlpha(colors.background, 0.2);
-    c.fillRect(x + 8, y + 8, 1, 20);
-  }
-
-  private drawLargeCactus(x: number, y: number, colors: SkinColors): void {
-    const c = this.ctx;
-    c.fillStyle = colors.obstacle;
-    
-    // Main stem - chunky
-    c.fillRect(x + 8, y + 2, 10, 48);
-    c.fillRect(x + 6, y + 5, 14, 42);
-    
-    // Left arm
-    c.fillRect(x, y + 14, 8, 6);
-    c.fillRect(x - 4, y + 10, 6, 16);
-    c.fillRect(x - 4, y + 6, 4, 6);
-    
-    // Right arm
-    c.fillRect(x + 18, y + 22, 8, 6);
-    c.fillRect(x + 24, y + 16, 6, 16);
-    c.fillRect(x + 26, y + 12, 4, 6);
-    
-    // Top spikes
-    c.fillRect(x + 10, y, 2, 3);
-    c.fillRect(x + 14, y, 2, 3);
-    
-    // Texture
-    c.fillStyle = this.adjustAlpha(colors.background, 0.15);
-    c.fillRect(x + 12, y + 10, 1, 35);
-  }
-
-  private drawCactusGroup(x: number, y: number, colors: SkinColors): void {
-    // Three cacti with slight variations
-    this.drawSmallCactus(x, y + 2, colors);
-    this.drawSmallCactus(x + 18, y, colors);
-    this.drawSmallCactus(x + 34, y + 3, colors);
-  }
-
-  private drawPterodactyl(x: number, y: number, colors: SkinColors): void {
-    const c = this.ctx;
-    c.fillStyle = colors.obstacle;
-    
-    // Body - more detailed
-    c.fillRect(x + 14, y + 16, 22, 10);
-    c.fillRect(x + 12, y + 18, 26, 6);
-    
-    // Head
-    c.fillRect(x + 34, y + 14, 10, 10);
-    c.fillRect(x + 42, y + 16, 6, 6);
-    
-    // Beak
-    c.fillRect(x + 46, y + 18, 6, 3);
-    c.fillRect(x + 50, y + 19, 4, 2);
-    
-    // Eye
-    c.fillStyle = colors.background;
-    c.fillRect(x + 38, y + 16, 3, 3);
-    c.fillStyle = colors.obstacle;
-    c.fillRect(x + 39, y + 17, 1, 1);
-    
-    // Crest
-    c.fillRect(x + 36, y + 12, 6, 4);
-    c.fillRect(x + 34, y + 10, 4, 4);
-    
-    // Wing (animated)
-    if (this.pterodactylFrame === 0) {
-      // Wings up
-      c.fillRect(x + 8, y + 2, 24, 6);
-      c.fillRect(x + 4, y, 20, 4);
-      c.fillRect(x, y - 4, 16, 6);
-      c.fillRect(x - 4, y - 6, 10, 4);
-    } else {
-      // Wings down
-      c.fillRect(x + 8, y + 26, 24, 6);
-      c.fillRect(x + 4, y + 30, 20, 4);
-      c.fillRect(x, y + 32, 16, 6);
-      c.fillRect(x - 4, y + 36, 10, 4);
-    }
-    
-    // Tail
-    c.fillRect(x, y + 18, 14, 6);
-    c.fillRect(x - 4, y + 20, 6, 4);
-  }
-
-  private drawPlayerLegend(players: PlayerGameState[], colors: SkinColors, localPlayerId?: string): void {
-    this.ctx.font = '8px "Press Start 2P", monospace';
-    
-    let yOffset = 15;
-    players.forEach((player, index) => {
-      const isLocal = player.id === localPlayerId;
-      const playerColor = this.playerColorMap.get(player.id) || colors.dino;
-      
-      // Background for better readability
-      this.ctx.fillStyle = this.adjustAlpha(colors.background, 0.7);
-      this.ctx.fillRect(5, yOffset - 9, 120, 14);
-      
-      // Colored dot
-      this.ctx.fillStyle = playerColor;
-      this.ctx.beginPath();
-      this.ctx.arc(15, yOffset - 2, 5, 0, Math.PI * 2);
-      this.ctx.fill();
-      
-      // Border for local player dot
-      if (isLocal) {
-        this.ctx.strokeStyle = colors.foreground;
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-      }
-      
-      // Player name and score
-      const prefix = isLocal ? '►' : ' ';
-      const status = player.isAlive ? '' : '✗';
-      const name = player.username.substring(0, 5).toUpperCase();
-      const score = String(player.score).padStart(5, '0');
-      
-      this.ctx.fillStyle = player.isAlive ? colors.foreground : colors.ground;
-      this.ctx.textAlign = 'left';
-      this.ctx.fillText(`${prefix}${name}`, 25, yOffset);
-      
-      this.ctx.textAlign = 'right';
-      this.ctx.fillText(`${score}${status}`, 120, yOffset);
-      
-      yOffset += 16;
+      this.ctx.drawImage(
+        this.spriteSheet!,
+        cloud.x, cloud.y, cloud.w, cloud.h,
+        x, pos.y, cloud.w, cloud.h
+      );
     });
   }
 
-  private drawHiScore(state: GameState, colors: SkinColors): void {
+  private drawDino(player: PlayerGameState, isLocal: boolean, drawIndex: number): void {
+    if (!player.isAlive) {
+      this.drawDeadDino(player, drawIndex);
+      return;
+    }
+
+    const xOffset = drawIndex * 8;
+    const x = DINO_X + xOffset;
+    const y = player.y;
+
+    if (!this.spriteReady || !this.spriteSheet) {
+      this.drawDinoFallback(x, y, player);
+      return;
+    }
+
+    const trexBase = this.spriteDef.TREX_BASE;
+    let frame: SpriteCoords;
+
+    if (player.isDucking) {
+      frame = this.runFrame === 0 ? this.spriteDef.TREX.DUCKING_1 : this.spriteDef.TREX.DUCKING_2;
+      // Ducking dino is shorter, adjust y position
+      const duckY = y + (DINO_HEIGHT - DINO_DUCK_HEIGHT);
+      this.ctx.drawImage(
+        this.spriteSheet,
+        trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
+        x, duckY, frame.w, frame.h
+      );
+    } else if (player.isJumping) {
+      frame = this.spriteDef.TREX.JUMPING;
+      this.ctx.drawImage(
+        this.spriteSheet,
+        trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
+        x, y, frame.w, frame.h
+      );
+    } else {
+      // Running animation
+      frame = this.runFrame === 0 ? this.spriteDef.TREX.RUNNING_1 : this.spriteDef.TREX.RUNNING_2;
+      this.ctx.drawImage(
+        this.spriteSheet,
+        trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
+        x, y, frame.w, frame.h
+      );
+    }
+
+    // Draw player indicator for multiplayer
+    if (!isLocal) {
+      const playerColor = this.playerColorMap.get(player.id) || '#2ECC71';
+      const indicatorY = Math.min(y - 15, GROUND_Y - 60);
+      this.ctx.fillStyle = playerColor;
+      this.ctx.beginPath();
+      this.ctx.arc(x + frame.w / 2, indicatorY, 4, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+
+  private drawDinoFallback(x: number, y: number, player: PlayerGameState): void {
+    this.ctx.fillStyle = '#262626';
+
+    if (player.isDucking) {
+      // Ducking body
+      this.ctx.fillRect(x, y + (DINO_HEIGHT - DINO_DUCK_HEIGHT) + 4, 50, 14);
+      this.ctx.fillRect(x + 44, y + (DINO_HEIGHT - DINO_DUCK_HEIGHT), 14, 14);
+    } else {
+      // Head
+      this.ctx.fillRect(x + 30, y - 2, 14, 18);
+      this.ctx.fillRect(x + 38, y + 4, 6, 8);
+      // Body
+      this.ctx.fillRect(x + 14, y + 14, 24, 22);
+      // Tail
+      this.ctx.fillRect(x + 4, y + 18, 12, 10);
+      // Legs
+      this.ctx.fillRect(x + 16, y + 36, 8, 12);
+      this.ctx.fillRect(x + 28, y + 36, 8, 12);
+    }
+  }
+
+  private drawDeadDino(player: PlayerGameState, drawIndex: number): void {
+    const x = DINO_X + drawIndex * 8;
+    const y = GROUND_Y;
+
+    if (!this.spriteReady || !this.spriteSheet) {
+      this.ctx.globalAlpha = 0.4;
+      this.ctx.fillStyle = '#262626';
+      this.ctx.fillRect(x + 14, y + 14, 24, 22);
+      this.ctx.fillRect(x + 30, y - 2, 14, 18);
+      this.ctx.globalAlpha = 1;
+      return;
+    }
+
+    const trexBase = this.spriteDef.TREX_BASE;
+    const frame = this.spriteDef.TREX.CRASHED;
+
+    this.ctx.globalAlpha = 0.4;
+    this.ctx.drawImage(
+      this.spriteSheet,
+      trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
+      x, y, frame.w, frame.h
+    );
+    this.ctx.globalAlpha = 1;
+
+    // Dead indicator
+    this.ctx.fillStyle = '#FF0000';
     this.ctx.font = '10px "Press Start 2P", monospace';
-    this.ctx.fillStyle = colors.foreground;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('☠', x + frame.w / 2, y - 15);
+  }
+
+  private drawObstacle(obstacle: Obstacle): void {
+    if (!this.spriteReady || !this.spriteSheet) {
+      this.drawObstacleFallback(obstacle);
+      return;
+    }
+
+    switch (obstacle.type) {
+      case 'cactus-small':
+        this.drawCactusSmall(obstacle.x, obstacle.y);
+        break;
+      case 'cactus-large':
+        this.drawCactusLarge(obstacle.x, obstacle.y);
+        break;
+      case 'cactus-group':
+        // Draw multiple small cacti
+        this.drawCactusSmall(obstacle.x, obstacle.y);
+        this.drawCactusSmall(obstacle.x + 18, obstacle.y);
+        this.drawCactusSmall(obstacle.x + 34, obstacle.y);
+        break;
+      case 'pterodactyl':
+        this.drawPterodactyl(obstacle.x, obstacle.y);
+        break;
+    }
+  }
+
+  private drawCactusSmall(x: number, y: number): void {
+    const cactus = this.spriteDef.CACTUS_SMALL;
+    this.ctx.drawImage(
+      this.spriteSheet!,
+      cactus.x, cactus.y, cactus.w, cactus.h,
+      x, y, cactus.w, cactus.h
+    );
+  }
+
+  private drawCactusLarge(x: number, y: number): void {
+    const cactus = this.spriteDef.CACTUS_LARGE;
+    this.ctx.drawImage(
+      this.spriteSheet!,
+      cactus.x, cactus.y, cactus.w, cactus.h,
+      x, y, cactus.w, cactus.h
+    );
+  }
+
+  private drawPterodactyl(x: number, y: number): void {
+    const ptero = this.pterodactylFrame === 0
+      ? this.spriteDef.PTERODACTYL.frame1
+      : this.spriteDef.PTERODACTYL.frame2;
+
+    this.ctx.drawImage(
+      this.spriteSheet!,
+      ptero.x, ptero.y, ptero.w, ptero.h,
+      x, y, ptero.w, ptero.h
+    );
+  }
+
+  private drawObstacleFallback(obstacle: Obstacle): void {
+    this.ctx.fillStyle = '#333333';
+
+    switch (obstacle.type) {
+      case 'cactus-small':
+        this.ctx.fillRect(obstacle.x + 5, obstacle.y + 2, 8, 33);
+        this.ctx.fillRect(obstacle.x, obstacle.y + 10, 6, 4);
+        this.ctx.fillRect(obstacle.x + 12, obstacle.y + 16, 6, 4);
+        break;
+      case 'cactus-large':
+        this.ctx.fillRect(obstacle.x + 8, obstacle.y + 2, 10, 48);
+        this.ctx.fillRect(obstacle.x, obstacle.y + 14, 8, 6);
+        this.ctx.fillRect(obstacle.x + 18, obstacle.y + 22, 8, 6);
+        break;
+      case 'cactus-group':
+        for (let i = 0; i < 3; i++) {
+          const cx = obstacle.x + i * 18;
+          this.ctx.fillRect(cx + 5, obstacle.y + 2, 8, 33);
+        }
+        break;
+      case 'pterodactyl':
+        this.ctx.fillRect(obstacle.x + 14, obstacle.y + 16, 22, 10);
+        this.ctx.fillRect(obstacle.x + 34, obstacle.y + 14, 16, 10);
+        if (this.pterodactylFrame === 0) {
+          this.ctx.fillRect(obstacle.x + 8, obstacle.y + 2, 24, 6);
+        } else {
+          this.ctx.fillRect(obstacle.x + 8, obstacle.y + 26, 24, 6);
+        }
+        break;
+    }
+  }
+
+  private drawHiScore(state: GameState): void {
+    this.ctx.font = '10px "Press Start 2P", monospace';
+    this.ctx.fillStyle = this.skinConfig.filter ? '#FFFFFF' : '#1A1A1A';
     this.ctx.textAlign = 'right';
-    
+
     const hi = 'HI ' + String(Math.floor(state.distance)).padStart(5, '0');
     this.ctx.fillText(hi, CANVAS_WIDTH - 10, 20);
   }
 
-  private drawGameOver(colors: SkinColors): void {
+  private drawGameOver(): void {
+    const bgColor = this.skinConfig.backgroundColor || '#FFFFFF';
+    const fgColor = this.skinConfig.filter ? '#FFFFFF' : '#1A1A1A';
+
     // Semi-transparent overlay
-    this.ctx.fillStyle = this.adjustAlpha(colors.background, 0.85);
+    this.ctx.fillStyle = bgColor;
+    this.ctx.globalAlpha = 0.85;
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    // Game Over text
-    this.ctx.fillStyle = colors.foreground;
+    this.ctx.globalAlpha = 1;
+
+    // Game Over text (could use sprite, but text works well)
+    this.ctx.fillStyle = fgColor;
     this.ctx.font = '20px "Press Start 2P", monospace';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10);
-    
-    this.ctx.font = '8px "Press Start 2P", monospace';
-    this.ctx.fillText('WAITING FOR RESULTS...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
-  }
 
-  private adjustAlpha(color: string, alpha: number): string {
-    // Convert hex to rgba
-    if (color.startsWith('#')) {
-      const r = parseInt(color.slice(1, 3), 16);
-      const g = parseInt(color.slice(3, 5), 16);
-      const b = parseInt(color.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    // Draw restart button sprite if available
+    if (this.spriteReady && this.spriteSheet) {
+      const restart = this.spriteDef.RESTART;
+      this.ctx.drawImage(
+        this.spriteSheet,
+        restart.x, restart.y, restart.w, restart.h,
+        CANVAS_WIDTH / 2 - restart.w / 2, CANVAS_HEIGHT / 2 + 10, restart.w, restart.h
+      );
+    } else {
+      this.ctx.font = '8px "Press Start 2P", monospace';
+      this.ctx.fillText('PRESS SPACE TO RESTART', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
     }
-    return color;
   }
 
-  // Draw start screen
   renderStartScreen(skin: SkinType): void {
-    const colors = SKIN_COLORS[skin];
-    
-    this.ctx.fillStyle = colors.background;
+    const config = getSkinConfig(skin);
+    const bgColor = config.backgroundColor || '#FFFFFF';
+    const fgColor = config.filter ? '#FFFFFF' : '#1A1A1A';
+
+    // Update skin if changed
+    if (this.skin !== skin) {
+      this.setSkin(skin);
+    }
+
+    this.ctx.fillStyle = bgColor;
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    // Ground
-    this.drawGround(colors, 0);
-    
-    // Static dino
-    this.drawStaticDino(DINO_X, GROUND_Y, colors);
-    
+
+    // Draw frost overlay for winter
+    if (this.winterEffects) {
+      this.winterEffects.renderFrostOverlay(this.ctx);
+    }
+
+    // Apply filter
+    if (config.filter) {
+      this.ctx.filter = config.filter;
+    }
+
+    // Draw ground
+    this.drawGround(0);
+
+    // Draw static dino
+    if (this.spriteReady && this.spriteSheet) {
+      const trexBase = this.spriteDef.TREX_BASE;
+      const frame = this.spriteDef.TREX.WAITING_1;
+      this.ctx.drawImage(
+        this.spriteSheet,
+        trexBase.x + frame.x, trexBase.y + frame.y, frame.w, frame.h,
+        DINO_X, GROUND_Y, frame.w, frame.h
+      );
+    } else {
+      this.drawDinoFallback(DINO_X, GROUND_Y, {
+        isJumping: false,
+        isDucking: false
+      } as PlayerGameState);
+    }
+
+    // Reset filter
+    this.ctx.filter = 'none';
+
+    // Draw scarf for winter
+    if (this.winterEffects) {
+      this.winterEffects.renderDinoScarf(this.ctx, DINO_X, GROUND_Y, false);
+      this.winterEffects.update(0);
+      this.winterEffects.render(this.ctx);
+    }
+
     // Title
-    this.ctx.fillStyle = colors.foreground;
+    this.ctx.fillStyle = fgColor;
     this.ctx.font = '16px "Press Start 2P", monospace';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('PIXEL DINO', CANVAS_WIDTH / 2, 50);
-    
+
     this.ctx.font = '10px "Press Start 2P", monospace';
     this.ctx.fillText('PRESS SPACE TO START', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40);
-  }
-
-  private drawStaticDino(x: number, y: number, colors: SkinColors): void {
-    const c = this.ctx;
-    c.fillStyle = colors.dino;
-    
-    // Head - detailed T-Rex shape
-    c.fillRect(x + 30, y - 2, 14, 18);
-    c.fillRect(x + 26, y + 2, 6, 12);
-    c.fillRect(x + 38, y + 4, 6, 8);
-    c.fillRect(x + 42, y + 8, 4, 4);
-    
-    // Eye socket
-    c.fillStyle = colors.background;
-    c.fillRect(x + 36, y + 2, 4, 4);
-    c.fillStyle = colors.dino;
-    c.fillRect(x + 37, y + 3, 2, 2);
-    
-    // Mouth line
-    c.fillStyle = colors.background;
-    c.fillRect(x + 38, y + 10, 8, 1);
-    c.fillStyle = colors.dino;
-    
-    // Body
-    c.fillRect(x + 14, y + 14, 24, 22);
-    c.fillRect(x + 10, y + 18, 6, 14);
-    c.fillRect(x + 34, y + 16, 6, 12);
-    
-    // Arms
-    c.fillRect(x + 34, y + 22, 8, 4);
-    c.fillRect(x + 40, y + 24, 3, 4);
-    
-    // Tail
-    c.fillRect(x + 4, y + 18, 12, 10);
-    c.fillRect(x, y + 20, 6, 6);
-    c.fillRect(x - 4, y + 22, 6, 4);
-    
-    // Legs (standing)
-    c.fillRect(x + 16, y + 36, 8, 10);
-    c.fillRect(x + 14, y + 46, 8, 4);
-    c.fillRect(x + 28, y + 36, 8, 10);
-    c.fillRect(x + 26, y + 46, 8, 4);
   }
 }

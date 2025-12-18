@@ -27,6 +27,12 @@ const SKINS: SkinOption[] = [
     unlocked: true,
   },
   {
+    id: 'winter',
+    name: 'WINTER',
+    description: 'SNOWY THEME WITH SCARF & SNOWFLAKES',
+    unlocked: true,
+  },
+  {
     id: 'phosphor',
     name: 'PHOSPHOR',
     description: 'GREEN TERMINAL AESTHETIC',
@@ -46,6 +52,18 @@ const SKINS: SkinOption[] = [
     description: 'OLD SCHOOL SCANLINES',
     unlocked: true,
     requirement: 'REACH 5000 DISTANCE',
+  },
+  {
+    id: 'neon',
+    name: 'NEON',
+    description: 'CYBERPUNK GLOW EFFECTS',
+    unlocked: true,
+  },
+  {
+    id: 'golden',
+    name: 'GOLDEN',
+    description: 'LUXURIOUS GOLD FINISH',
+    unlocked: true,
   },
 ];
 
@@ -69,7 +87,7 @@ const SkinPreview: React.FC<{ skin: SkinType; isActive: boolean }> = ({ skin, is
     <canvas
       ref={canvasRef}
       className={`w-full h-auto ${isActive ? 'ring-4 ring-foreground' : ''}`}
-      style={{ 
+      style={{
         aspectRatio: '800/200',
         imageRendering: 'pixelated',
       }}
