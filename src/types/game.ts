@@ -124,8 +124,8 @@ export interface ClientToServerEvents {
 // Game Constants
 export const GAME_CONFIG = {
   // Canvas
-  CANVAS_WIDTH: 800,
-  CANVAS_HEIGHT: 200,
+  CANVAS_WIDTH: 1200,
+  CANVAS_HEIGHT: 300,
 
   // Physics
   GRAVITY: 0.6,
@@ -140,8 +140,8 @@ export const GAME_CONFIG = {
   DINO_X: 50,
 
   // Ground positioning - ground line where sprite feet touch
-  GROUND_Y: 182, // Visual baseline (closer to bottom)
-  DINO_START_Y: 145, // GROUND_Y - DINO_HEIGHT = 182 - 47 = 135
+  GROUND_Y: 282, // Visual baseline (closer to bottom)
+  DINO_START_Y: 245, // GROUND_Y - DINO_HEIGHT = 182 - 47 = 135
 
   // Game
   INITIAL_SPEED: 6,

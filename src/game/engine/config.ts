@@ -7,8 +7,8 @@ export const FPS = 60;
 
 export const ENGINE_CONFIG = {
   // Canvas
-  CANVAS_WIDTH: 800,
-  CANVAS_HEIGHT: 200,
+  CANVAS_WIDTH: 1200,
+  CANVAS_HEIGHT: 300,
 
   // Speed
   SPEED: 6,
@@ -33,7 +33,7 @@ export const ENGINE_CONFIG = {
 
   // Ground positioning
   // Ground line is where sprite feet touch - near bottom of canvas
-  GROUND_Y: 192, // Visual baseline where feet touch
+  GROUND_Y: 292, // Visual baseline where feet touch
   BOTTOM_PAD: 6, // Padding below ground line
   GROUND_HEIGHT: 12, // Height of horizon sprite
 } as const;

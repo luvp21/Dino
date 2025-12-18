@@ -9,7 +9,7 @@ import { submitGameResult } from '@/services/lobbyService';
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { profile, profileId, updateProfile, syncProfile } = useGameStore();
-  const [lastScore, setLastScore] = useState<number | null>(null);
+  const [lastScore, setLastScore] = useState<number>(0);;
   const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   // Sync profile on mount
@@ -62,11 +62,11 @@ const HomePage: React.FC = () => {
 
       {/* Game Canvas */}
       <div className="flex justify-center px-4">
-        <GameCanvas onGameOver={handleGameOver} className="w-full" />
+        <GameCanvas onGameOver={handleGameOver} />
       </div>
 
       {/* Score Display */}
-      {lastScore !== null && (
+      {/* {lastScore !== null && (
         <div className="text-center space-y-2">
           <div className="text-[12px]">
             {isNewHighScore ? (
@@ -81,7 +81,7 @@ const HomePage: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Action Buttons */}
       {/* <div className="flex flex-col md:flex-row items-center justify-center gap-4">
@@ -101,7 +101,28 @@ const HomePage: React.FC = () => {
       </div> */}
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
+        <PixelButton
+          variant="outline"
+          size="lg"
+          onClick={() => navigate('/leaderboard')}
+        >
+          LEADERBOARD
+        </PixelButton>
+
+        <PixelCard className="text-center">
+          <div className="text-[20px] mb-2">
+            {isNewHighScore ? (
+              <span className="animate-pulse-pixel">🎉 {lastScore}</span>
+            ) : (
+              lastScore
+            )}
+          </div>
+          <div className="text-[8px] text-muted-foreground">
+            {isNewHighScore ? "NEW HIGH SCORE!" : "LAST SCORE"}
+          </div>
+        </PixelCard>
+
         <PixelCard className="text-center">
           <div className="text-[20px] mb-2">{profile?.bestDistance || 0}</div>
           <div className="text-[8px] text-muted-foreground">BEST DISTANCE</div>

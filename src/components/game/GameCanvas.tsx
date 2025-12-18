@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameCanvas } from '@/hooks/useGameCanvas';
 import { useGameStore } from '@/store/gameStore';
 import { SoundControls } from '@/components/ui/SoundControls';
+import { GAME_CONFIG } from '@/types/game';
 
 interface GameCanvasProps {
   onGameOver?: (score: number) => void;
@@ -15,14 +16,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, className })
   return (
     <div className={`relative ${className || ''}`}>
       {/* Game canvas */}
-      <canvas
-        ref={canvasRef}
-        className="game-canvas pixel-border-thick w-full max-w-[1100px]"
-        style={{
-          aspectRatio: '800/200',
-          maxHeight: '280px',
-        }}
-      />
+
+
+<canvas
+  ref={canvasRef}
+  width={GAME_CONFIG.CANVAS_WIDTH}
+  height={GAME_CONFIG.CANVAS_HEIGHT}
+  className="game-canvas pixel-border-thick"
+  style={{
+    width: `${GAME_CONFIG.CANVAS_WIDTH}px`,
+    height: `${GAME_CONFIG.CANVAS_HEIGHT}px`,
+  }}
+/>
 
       {/* Sound controls */}
       <div className="absolute top-2 left-2">

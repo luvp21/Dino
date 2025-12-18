@@ -14,14 +14,14 @@ interface UseGameCanvasOptions {
 
 // Convert new engine state to renderer-compatible format
 function convertEngineStateToGameState(
-  engine: DinoEngine, 
-  playerId: string, 
-  username: string, 
+  engine: DinoEngine,
+  playerId: string,
+  username: string,
   skin: string
 ): GameState {
   const engineState = engine.getState();
   const tRex = engineState.tRex;
-  
+
   // Convert obstacles to old format
   const obstacles: Obstacle[] = engineState.obstacles.map(o => ({
     id: o.id,
@@ -39,7 +39,7 @@ function convertEngineStateToGameState(
   const player: PlayerGameState = {
     id: playerId,
     username,
-    skin: skin as any,
+    skin: skin as PlayerGameState['skin'],
     y: tRex.y,
     velocityY: tRex.jumpVelocity,
     isJumping: tRex.jumping,
@@ -68,7 +68,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const animationFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const accumulatorRef = useRef<number>(0);
-  
+
   const { profile, currentSkin, profileId } = useGameStore();
   const [isRunning, setIsRunning] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -80,13 +80,13 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   // Award coins after game
   const awardCoins = useCallback(async (distance: number) => {
     if (!profileId) return 0;
-    
+
     try {
       const { data, error } = await supabase.rpc('award_coins', {
         p_profile_id: profileId,
         p_distance: distance,
       });
-      
+
       if (!error && data) {
         setCoinsEarned(data);
         toast.success(`+${data} coins earned!`);
@@ -104,7 +104,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
 
     const seed = Date.now();
     engineRef.current = new DinoEngine(seed);
-    
+
     if (!rendererRef.current) {
       rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
     } else {
@@ -115,7 +115,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     setScore(0);
     setCoinsEarned(0);
     setIsRunning(false);
-    
+
     // Render start screen
     rendererRef.current.renderStartScreen(currentSkin);
   }, [profile, currentSkin]);
@@ -140,11 +140,11 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
         soundEngine.playHit();
         setTimeout(() => soundEngine.playGameOver(), 200);
         soundEngine.stopMusic();
-        
+
         const finalScore = engineRef.current.getScore();
         setScore(finalScore);
         options.onGameOver?.(finalScore);
-        
+
         // IMPORTANT: Render the final collision frame before stopping
         const finalState = convertEngineStateToGameState(
           engineRef.current,
@@ -153,7 +153,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
           currentSkin
         );
         rendererRef.current.render(finalState, profile.id);
-        
+
         // Award coins for distance traveled
         awardCoins(finalScore).then((coins) => {
           if (coins > 0) {
@@ -182,7 +182,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   // Start game
   const startGame = useCallback(() => {
     if (!engineRef.current) return;
-    
+
     engineRef.current.start();
     setIsRunning(true);
     soundEngine.startMusic();
@@ -209,11 +209,11 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     }
 
     // Convert to engine input action
-    const engineAction: InputAction = 
+    const engineAction: InputAction =
       action === 'jump' ? 'jump' :
       action === 'duck' ? 'duck_start' :
       'duck_end';
-    
+
     engineRef.current.processInput(engineAction);
   }, [profile, isRunning, gameOver, startGame]);
 
@@ -226,17 +226,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   // Restart and immediately start playing (no start screen)
   const restartAndPlay = useCallback(() => {
     if (!canvasRef.current || !profile) return;
-    
+
     cancelAnimationFrame(animationFrameRef.current);
-    
-    // Clear restart button state
-    if (rendererRef.current) {
-      rendererRef.current.clearRestartButtonState();
-    }
-    
+
     const seed = Date.now();
     engineRef.current = new DinoEngine(seed);
-    
+
     if (!rendererRef.current) {
       rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
     } else {
@@ -246,13 +241,13 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     setGameOver(false);
     setScore(0);
     setCoinsEarned(0);
-    
-    // Start immediately
+
     engineRef.current.start();
     setIsRunning(true);
     soundEngine.startMusic();
     lastTimeRef.current = performance.now();
     accumulatorRef.current = 0;
+
     animationFrameRef.current = requestAnimationFrame(gameLoop);
   }, [profile, currentSkin, gameLoop]);
 
@@ -298,7 +293,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
       const y = touch.clientY - rect.top;
-      
+
       if (gameOver) {
         restartAndPlay();
       } else if (y < rect.height / 2) {
@@ -322,21 +317,26 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     };
   }, [handleInput, restartAndPlay, gameOver]);
 
-  // Initialize on mount
+  // Initialize once when profile is available.
+  // Avoid re-initializing on later profile/skin updates (e.g. after awarding coins),
+  // which would otherwise immediately redraw the start screen over the final
+  // collision frame.
   useEffect(() => {
-    initGame();
-    
+    if (!engineRef.current && profile) {
+      initGame();
+    }
+
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [initGame]);
+  }, [profile, currentSkin, initGame]);
 
   // Start game loop when running
   useEffect(() => {
     if (isRunning && !gameOver) {
       animationFrameRef.current = requestAnimationFrame(gameLoop);
     }
-    
+
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
     };
