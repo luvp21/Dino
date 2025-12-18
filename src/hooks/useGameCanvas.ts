@@ -99,11 +99,10 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   }, [profileId]);
 
   // Initialize game
-  const initGame = useCallback(() => {
-    if (!canvasRef.current || !profile) return;
+  const initGame = useCallback(async () => {
+    if (!canvasRef.current) return;
 
-    const seed = Date.now();
-    engineRef.current = new DinoEngine(seed);
+    engineRef.current = new DinoEngine(Date.now());
 
     if (!rendererRef.current) {
       rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
@@ -111,14 +110,14 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       rendererRef.current.setSkin(currentSkin);
     }
 
-    setGameOver(false);
-    setScore(0);
-    setCoinsEarned(0);
-    setIsRunning(false);
+    await rendererRef.current.waitUntilReady();
 
-    // Render start screen
     rendererRef.current.renderStartScreen(currentSkin);
-  }, [profile, currentSkin]);
+
+    setGameOver(false);
+    setIsRunning(false);
+    setScore(0);
+  }, [currentSkin]);
 
   // Game loop
   const gameLoop = useCallback((timestamp: number) => {
@@ -317,19 +316,16 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     };
   }, [handleInput, restartAndPlay, gameOver]);
 
-  // Initialize once when profile is available.
-  // Avoid re-initializing on later profile/skin updates (e.g. after awarding coins),
-  // which would otherwise immediately redraw the start screen over the final
-  // collision frame.
+  // Initialize on mount when profile is available
   useEffect(() => {
-    if (!engineRef.current && profile) {
-      initGame();
+    if (!profile) return;
+
+    if (!engineRef.current) {
+      void initGame();
     }
 
-    return () => {
-      cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, [profile, currentSkin, initGame]);
+    return () => cancelAnimationFrame(animationFrameRef.current);
+  }, [profile, initGame]);
 
   // Start game loop when running
   useEffect(() => {

@@ -33,6 +33,7 @@ export class DinoGameRenderer {
   private skin: SkinType;
   private skinConfig: SkinConfig;
   private spriteDef: SpriteDefinition;
+  private readyPromise: Promise<void> | null = null;
 
   // rendering assets
   private spriteSheet: HTMLImageElement | null = null;
@@ -66,7 +67,8 @@ export class DinoGameRenderer {
     ctx.scale(scale, scale);
     ctx.imageSmoothingEnabled = false;
 
-    this.loadSprite();
+    // Begin loading the sprite sheet and store the promise so callers can await readiness
+    this.readyPromise = this.loadSprite();
   }
 
   // ================================
@@ -87,7 +89,19 @@ export class DinoGameRenderer {
     this.skin = skin;
     this.skinConfig = getSkinConfig(skin);
     this.spriteDef = getSpriteDefinition(skin, false);
-    this.loadSprite();
+    // Reload sprite sheet for the new skin and update the readiness promise
+    this.readyPromise = this.loadSprite();
+  }
+
+  /**
+   * Wait until the sprite sheet has finished loading.
+   * Used by hooks to ensure the start screen renders with correct sprites.
+   */
+  async waitUntilReady(): Promise<void> {
+    if (!this.readyPromise) {
+      this.readyPromise = this.loadSprite();
+    }
+    return this.readyPromise;
   }
 
   private getPlayerColor(playerId: string, index: number): string {
