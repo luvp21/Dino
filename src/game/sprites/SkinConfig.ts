@@ -34,7 +34,7 @@ export interface SkinConfig {
 // =============================================
 
 const CLASSIC_BASE = {
-  spriteSheet: '/offline-sprite.png', // LDPI sprite sheet
+  spriteSheet: '/200-offline-sprite.png', // LDPI sprite sheet
   spriteSheetHDPI: '/200-offline-sprite.png', // HDPI sprite sheet
   definition: CLASSIC_SPRITE_DEFINITION_LDPI,
   definitionHDPI: CLASSIC_SPRITE_DEFINITION,
@@ -121,32 +121,3 @@ export function getSpriteDefinition(skin: SkinType, isHDPI: boolean = false): Sp
   return isHDPI ? config.definitionHDPI : config.definition;
 }
 
-/**
- * Get the appropriate sprite sheet path based on device pixel ratio
- */
-export function getSpriteSheetPath(skin: SkinType, isHDPI: boolean = false): string {
-  const config = getSkinConfig(skin);
-  if (isHDPI && config.spriteSheetHDPI) {
-    return config.spriteSheetHDPI;
-  }
-  return config.spriteSheet || '/offline-sprite.png';
-}
-
-/**
- * Get rarity color for UI display
- */
-export function getRarityColor(rarity: SkinRarity): string {
-  switch (rarity) {
-    case 'common': return '#9CA3AF';    // Gray
-    case 'rare': return '#3B82F6';      // Blue
-    case 'epic': return '#A855F7';      // Purple
-    case 'legendary': return '#F59E0B'; // Gold/Amber
-  }
-}
-
-/**
- * Get rarity display name
- */
-export function getRarityName(rarity: SkinRarity): string {
-  return rarity.toUpperCase();
-}

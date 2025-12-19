@@ -9,13 +9,19 @@ import { CollisionBox } from './CollisionBox';
 import { OBSTACLE_TYPES, cloneCollisionBoxes } from './ObstacleTypes';
 import { TREX_COLLISION_BOXES, TREX_CONFIG } from './TRexCollision';
 import { SeededRandom } from './SeededRandom';
-import { 
-  EngineGameState, 
-  TRexState, 
-  ObstacleState, 
-  InputAction,
-  PlayerEngineState 
+import {
+  EngineGameState,
+  TRexState,
+  ObstacleState,
+  InputAction
 } from './types';
+
+export interface CollisionDebugData {
+  tRexBoundingBox: CollisionBox;
+  obstacleBoundingBox: CollisionBox;
+  tRexCollisionBoxes: CollisionBox[];
+  obstacleCollisionBoxes: CollisionBox[];
+}
 
 export class DinoEngine {
   private state: EngineGameState;
@@ -24,6 +30,8 @@ export class DinoEngine {
   private msPerFrame: number;
   private obstacleHistory: string[] = [];
   private obstacleIdCounter: number = 0;
+  private debugMode: boolean = false;
+  private collisionDebugData: CollisionDebugData | null = null;
 
   constructor(seed: number) {
     this.seed = seed;
@@ -99,6 +107,14 @@ export class DinoEngine {
 
   isGameOver(): boolean {
     return this.state.isGameOver;
+  }
+
+  setDebugMode(enabled: boolean): void {
+    this.debugMode = enabled;
+  }
+
+  getCollisionDebugData(): CollisionDebugData | null {
+    return this.collisionDebugData;
   }
 
   processInput(action: InputAction): void {
@@ -261,12 +277,29 @@ export class DinoEngine {
   }
 
   private spawnObstacles(): void {
+    // Don't spawn if there's already an obstacle off-screen waiting to enter
+    const hasOffScreenObstacle = this.state.obstacles.some(
+      obs => obs.x > ENGINE_CONFIG.CANVAS_WIDTH
+    );
+
+    if (hasOffScreenObstacle) {
+      return;
+    }
+
     const lastObstacle = this.state.obstacles[this.state.obstacles.length - 1];
 
-    if (lastObstacle && !lastObstacle.followingObstacleCreated &&
-        lastObstacle.x + lastObstacle.width + lastObstacle.gap < ENGINE_CONFIG.CANVAS_WIDTH) {
-      this.addNewObstacle();
-      lastObstacle.followingObstacleCreated = true;
+    if (lastObstacle && !lastObstacle.followingObstacleCreated) {
+      // Spawn new obstacle when the last one has moved far enough
+      // Check if the gap position (where next obstacle should start) has passed the canvas edge
+      const gapPosition = lastObstacle.x + lastObstacle.width + lastObstacle.gap;
+      if (gapPosition <= ENGINE_CONFIG.CANVAS_WIDTH) {
+        const obstacleCountBefore = this.state.obstacles.length;
+        this.addNewObstacle();
+        // Only mark as created if an obstacle was actually added
+        if (this.state.obstacles.length > obstacleCountBefore) {
+          lastObstacle.followingObstacleCreated = true;
+        }
+      }
     } else if (this.state.obstacles.length === 0) {
       this.addNewObstacle();
     }
@@ -282,8 +315,8 @@ export class DinoEngine {
       return;
     }
 
-    const size = this.rng.nextInt(1, Math.min(ENGINE_CONFIG.MAX_OBSTACLE_LENGTH,
-      obstacleType.multipleSpeed > this.state.currentSpeed ? 1 : ENGINE_CONFIG.MAX_OBSTACLE_LENGTH));
+    // Always spawn single obstacles (no stacking)
+    const size = 1;
 
     let yPos: number;
     if (Array.isArray(obstacleType.yPos)) {
@@ -292,7 +325,7 @@ export class DinoEngine {
       yPos = obstacleType.yPos;
     }
 
-    const minGap = Math.round(obstacleType.width * size * this.state.currentSpeed + obstacleType.minGap * ENGINE_CONFIG.GAP_COEFFICIENT);
+    const minGap = Math.round(obstacleType.width * this.state.currentSpeed + obstacleType.minGap * ENGINE_CONFIG.GAP_COEFFICIENT);
     const maxGap = Math.round(minGap * 1.5);
     const gap = this.rng.nextInt(minGap, maxGap);
 
@@ -300,7 +333,7 @@ export class DinoEngine {
       id: `obstacle_${this.obstacleIdCounter++}`,
       x: ENGINE_CONFIG.CANVAS_WIDTH + gap,
       y: yPos,
-      width: obstacleType.width * size,
+      width: obstacleType.width,
       height: obstacleType.height,
       size,
       type: obstacleType.type,
@@ -342,13 +375,16 @@ export class DinoEngine {
   }
 
   private checkCollision(): boolean {
-    if (this.state.obstacles.length === 0) return false;
+    if (this.state.obstacles.length === 0) {
+      this.collisionDebugData = null;
+      return false;
+    }
 
     const obstacle = this.state.obstacles[0];
     const { tRex } = this.state;
 
     // When ducking, the sprite is positioned lower (bottom stays on ground)
-    const tRexY = tRex.ducking 
+    const tRexY = tRex.ducking
       ? tRex.y + (TREX_CONFIG.HEIGHT - TREX_CONFIG.DUCK_HEIGHT)
       : tRex.y;
     const tRexHeight = tRex.ducking ? TREX_CONFIG.DUCK_HEIGHT : TREX_CONFIG.HEIGHT;
@@ -367,6 +403,40 @@ export class DinoEngine {
       obstacle.width - 2,
       obstacle.height - 2
     );
+
+    // Store debug data if debug mode is enabled
+    if (this.debugMode) {
+      const tRexCollisionBoxes = tRex.ducking ? TREX_COLLISION_BOXES.DUCKING : TREX_COLLISION_BOXES.RUNNING;
+      const adjustedTrexBoxes: CollisionBox[] = [];
+      const adjustedObstacleBoxes: CollisionBox[] = [];
+
+      for (const tBox of tRexCollisionBoxes) {
+        adjustedTrexBoxes.push(new CollisionBox(
+          tBox.x + tRexBox.x,
+          tBox.y + tRexBox.y,
+          tBox.width,
+          tBox.height
+        ));
+      }
+
+      for (const oBox of obstacle.collisionBoxes) {
+        adjustedObstacleBoxes.push(new CollisionBox(
+          oBox.x + obstacleBox.x,
+          oBox.y + obstacleBox.y,
+          oBox.width,
+          oBox.height
+        ));
+      }
+
+      this.collisionDebugData = {
+        tRexBoundingBox: tRexBox,
+        obstacleBoundingBox: obstacleBox,
+        tRexCollisionBoxes: adjustedTrexBoxes,
+        obstacleCollisionBoxes: adjustedObstacleBoxes,
+      };
+    } else {
+      this.collisionDebugData = null;
+    }
 
     // Quick bounds check
     if (!CollisionBox.compare(tRexBox, obstacleBox)) {
@@ -406,16 +476,5 @@ export class DinoEngine {
     if (this.state.score > this.state.highScore) {
       this.state.highScore = this.state.score;
     }
-  }
-
-  // Utility method to get debug info
-  getDebugInfo() {
-    return {
-      frame: this.state.frame,
-      speed: this.state.currentSpeed.toFixed(2),
-      score: this.state.score,
-      obstacleCount: this.state.obstacles.length,
-      runningTime: Math.floor(this.state.runningTime),
-    };
   }
 }

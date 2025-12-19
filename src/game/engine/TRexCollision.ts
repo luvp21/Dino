@@ -6,22 +6,23 @@ import { CollisionBox } from './CollisionBox';
 
 export const TREX_COLLISION_BOXES = {
   RUNNING: [
-    new CollisionBox(22, 0, 17, 16),
-    new CollisionBox(1, 18, 30, 9),
-    new CollisionBox(10, 35, 14, 8),
-    new CollisionBox(1, 24, 29, 5),
-    new CollisionBox(5, 30, 21, 4),
-    new CollisionBox(9, 34, 15, 4),
+    new CollisionBox(43, 3, 40, 30),
+    new CollisionBox(3, 35, 56, 9),
+    new CollisionBox(3, 42, 64, 8),
+    new CollisionBox(3, 51, 56, 8),
+    new CollisionBox(10, 57, 44, 10),
+    new CollisionBox(16, 68, 34, 4),
+    new CollisionBox(22, 72, 24, 14),
   ],
   DUCKING: [
-    new CollisionBox(1, 0, 55, 26),
+    new CollisionBox(1, 8, 110, 26),
   ],
 };
 
 export const TREX_CONFIG = {
-  WIDTH: 44,
-  HEIGHT: 47,
-  DUCK_WIDTH: 59,
-  DUCK_HEIGHT: 26,
+  WIDTH: 87,
+  HEIGHT: 87,
+  DUCK_WIDTH: 117,
+  DUCK_HEIGHT: 60,
   START_X: 50,
 };

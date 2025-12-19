@@ -99,7 +99,7 @@ export interface PlayerGameState {
 
 export interface Obstacle {
   id: string;
-  type: 'cactus-small' | 'cactus-large' | 'cactus-group' | 'pterodactyl';
+  type: 'cactus-small' | 'cactus-large' | 'pterodactyl';
   x: number;
   y: number;
   width: number;
@@ -151,12 +151,12 @@ export const GAME_CONFIG = {
   CANVAS_HEIGHT: 300,
 
   // Dino positioning
-  DINO_DUCK_HEIGHT: 26,
+  DINO_DUCK_HEIGHT: 35,
   DINO_X: 50,
 
   // Ground positioning - ground line where sprite feet touch
-  GROUND_Y: 282, // Visual baseline (closer to bottom)
-  DINO_START_Y: 245, // GROUND_Y - DINO_HEIGHT = 182 - 47 = 135
+  GROUND_Y: 270, // Visual baseline (closer to bottom)
+  DINO_START_Y: 203, // GROUND_Y - DINO_HEIGHT = 182 - 47 = 135
 
   // Game
   INITIAL_SPEED: 6,

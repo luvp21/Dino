@@ -30,7 +30,7 @@ export class MultiplayerGameEngine {
 
   constructor(seed: number, players: MultiplayerPlayer[]) {
     this.seed = seed;
-    
+
     // Create an engine instance for each player
     players.forEach(player => {
       const engine = new DinoEngine(seed);
@@ -63,13 +63,13 @@ export class MultiplayerGameEngine {
     // Get the first engine's state for obstacles (they're deterministic)
     const firstEngine = Array.from(this.playerEngines.values())[0];
     const engineState = firstEngine?.engine.getState();
-    
+
     // Convert obstacles
     const obstacles: Obstacle[] = engineState?.obstacles.map(o => ({
       id: o.id,
       type: o.type === 'CACTUS_SMALL' ? 'cactus-small' :
             o.type === 'CACTUS_LARGE' ? 'cactus-large' :
-            o.type === 'PTERODACTYL' ? 'pterodactyl' : 'cactus-group',
+            'pterodactyl',
       x: o.x,
       y: o.y,
       width: o.width,
@@ -109,7 +109,7 @@ export class MultiplayerGameEngine {
   getPlayer(playerId: string): PlayerGameState | undefined {
     const pe = this.playerEngines.get(playerId);
     if (!pe) return undefined;
-    
+
     const tRex = pe.engine.getTRex();
     return {
       id: pe.player.id,
@@ -151,20 +151,20 @@ export class MultiplayerGameEngine {
       const pe = this.playerEngines.get(input.playerId);
       if (!pe || !pe.isAlive) return;
 
-      const engineAction: InputAction = 
+      const engineAction: InputAction =
         input.action === 'jump' ? 'jump' :
         input.action === 'duck' ? 'duck_start' :
         'duck_end';
-      
+
       pe.engine.processInput(engineAction);
     });
 
     // Update all player engines
     this.playerEngines.forEach(pe => {
       if (!pe.isAlive) return;
-      
+
       pe.engine.update();
-      
+
       if (pe.engine.isGameOver()) {
         pe.isAlive = false;
         pe.score = pe.engine.getScore();
@@ -183,15 +183,5 @@ export class MultiplayerGameEngine {
     }
 
     return this.getState();
-  }
-
-  getDebugInfo() {
-    const firstEngine = Array.from(this.playerEngines.values())[0];
-    return {
-      frame: this.frame,
-      speed: firstEngine?.engine.getState().currentSpeed.toFixed(2) || '0',
-      distance: Math.max(...Array.from(this.playerEngines.values()).map(pe => pe.distance)),
-      alivePlayers: Array.from(this.playerEngines.values()).filter(pe => pe.isAlive).length,
-    };
   }
 }

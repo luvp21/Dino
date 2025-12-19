@@ -6,7 +6,7 @@ export function useSound() {
     const stored = localStorage.getItem('pixel-dino-music');
     return stored !== 'false';
   });
-  
+
   const [sfxEnabled, setSfxEnabled] = useState(() => {
     const stored = localStorage.getItem('pixel-dino-sfx');
     return stored !== 'false';
@@ -59,10 +59,6 @@ export function useSound() {
     soundEngine.playGameOver();
   }, []);
 
-  const playScore = useCallback(() => {
-    soundEngine.playScore();
-  }, []);
-
   const playCoin = useCallback(() => {
     soundEngine.playCoin();
   }, []);
@@ -79,7 +75,6 @@ export function useSound() {
     playDuck,
     playHit,
     playGameOver,
-    playScore,
     playCoin,
   };
 }

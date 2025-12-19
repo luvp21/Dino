@@ -19,7 +19,6 @@ export interface SpriteCoords {
 }
 
 export interface TRexFrames {
-  WAITING_1: SpriteCoords;
   WAITING_2: SpriteCoords;
   RUNNING_1: SpriteCoords;
   RUNNING_2: SpriteCoords;
@@ -60,18 +59,6 @@ export interface SpriteDefinition {
   // Background
   HORIZON: SpriteCoords;
   CLOUD: SpriteCoords;
-  MOON: SpriteCoords;
-  STAR: SpriteCoords;
-
-  // UI elements
-  RESTART: SpriteCoords;
-  GAME_OVER: SpriteCoords;
-  TEXT_SPRITE: SpriteCoords;
-
-  // Config
-  MAX_GAP_COEFFICIENT: number;
-  MAX_OBSTACLE_LENGTH: number;
-  BOTTOM_PAD: number;
 }
 
 // =============================================
@@ -83,7 +70,6 @@ export const CLASSIC_SPRITE_DEFINITION: SpriteDefinition = {
 
   // T-Rex animation frames (offsets from TREX_BASE)
   TREX: {
-    WAITING_1: { x: 44, y: 0, w: 44, h: 47 },
     WAITING_2: { x: 0, y: 0, w: 44, h: 47 },
     RUNNING_1: { x: 88, y: 0, w: 44, h: 47 },
     RUNNING_2: { x: 132, y: 0, w: 44, h: 47 },
@@ -169,18 +155,6 @@ export const CLASSIC_SPRITE_DEFINITION: SpriteDefinition = {
 
   // Background elements (HDPI)
   CLOUD: { x: 166, y: 2, w: 46, h: 14 },
-  MOON: { x: 954, y: 2, w: 20, h: 40 },
-  STAR: { x: 1276, y: 2, w: 9, h: 9 },
-
-  // UI elements (HDPI)
-  RESTART: { x: 2, y: 130, w: 36, h: 32 },
-  GAME_OVER: { x: 1294, y: 2, w: 191, h: 11 },
-  TEXT_SPRITE: { x: 1294, y: 2, w: 191, h: 13 },
-
-  // Game config
-  MAX_GAP_COEFFICIENT: 1.5,
-  MAX_OBSTACLE_LENGTH: 3,
-  BOTTOM_PAD: 10,
 };
 
 // =============================================
@@ -188,18 +162,17 @@ export const CLASSIC_SPRITE_DEFINITION: SpriteDefinition = {
 // =============================================
 export const CLASSIC_SPRITE_DEFINITION_LDPI: SpriteDefinition = {
   // T-Rex base position (LDPI)
-  TREX_BASE: { x: 848, y: 2 },
+  TREX_BASE: { x: 1678, y: 2 },
 
   // T-Rex frames (same relative offsets)
   TREX: {
-    WAITING_1: { x: 44, y: 0, w: 44, h: 47 },
-    WAITING_2: { x: 0, y: 0, w: 44, h: 47 },
-    RUNNING_1: { x: 88, y: 0, w: 44, h: 47 },
-    RUNNING_2: { x: 132, y: 0, w: 44, h: 47 },
-    JUMPING: { x: 0, y: 0, w: 44, h: 47 },
-    CRASHED: { x: 220, y: 0, w: 44, h: 47 },
-    DUCKING_1: { x: 264, y:18, w: 59, h: 26 },
-    DUCKING_2: { x: 323, y: 18, w: 59, h: 26 },
+    WAITING_2: { x: 0, y: 0, w: 88, h: 88 },
+    RUNNING_1: { x: 176, y: 0, w: 88, h: 88 },
+    RUNNING_2: { x: 264, y: 0, w: 88, h: 88 },
+    JUMPING: { x: 0, y: 0, w: 88, h: 88 },
+    CRASHED: { x: 444, y: 0, w: 79, h: 88 },
+    DUCKING_1: { x: 525, y: 36, w: 117, h: 60 },
+    DUCKING_2: { x: 643, y: 36, w: 117, h: 60 },
   },
 
   // Same collision boxes (relative to sprite)
@@ -213,13 +186,13 @@ export const CLASSIC_SPRITE_DEFINITION_LDPI: SpriteDefinition = {
   ],
 
   // Cacti obstacles (LDPI coords)
-  CACTUS_SMALL: { x: 228, y: 2, w: 17, h: 35 },
-  CACTUS_LARGE: { x: 332, y: 2, w: 25, h: 50 },
+  CACTUS_SMALL: { x: 446, y: 2, w: 33, h: 69 },
+  CACTUS_LARGE: { x: 652, y: 2, w: 49, h: 99 },
 
   // Pterodactyl (LDPI)
   PTERODACTYL: {
-    frame1: { x: 134, y: 2, w: 46, h: 40 },
-    frame2: { x: 180, y: 2, w: 46, h: 40 },
+    frame1: { x: 260, y: 14, w: 91, h: 66 },
+    frame2: { x: 352, y: 2, w: 91, h: 58 },
   },
 
   // Same obstacle definitions
@@ -274,20 +247,7 @@ export const CLASSIC_SPRITE_DEFINITION_LDPI: SpriteDefinition = {
   ],
 
   // Ground/horizon (LDPI)
-  HORIZON: { x: 2, y: 54, w: 600, h: 12 },
-
+  HORIZON: { x: 2, y: 102, w: 2400, h: 20 },
   // Background elements (LDPI)
-  CLOUD: { x: 86, y: 2, w: 46, h: 14 },
-  MOON: { x: 484, y: 2, w: 20, h: 40 },
-  STAR: { x: 645, y: 2, w: 9, h: 9 },
-
-  // UI elements (LDPI)
-  RESTART: { x: 2, y: 68, w: 36, h: 32 },
-  GAME_OVER: { x: 655, y: 2, w: 96, h: 11 },
-  TEXT_SPRITE: { x: 655, y: 2, w: 96, h: 13 },
-
-  // Game config
-  MAX_GAP_COEFFICIENT: 1.5,
-  MAX_OBSTACLE_LENGTH: 3,
-  BOTTOM_PAD: 10,
+  CLOUD: { x: 166, y: 2, w: 96, h: 28 },
 };

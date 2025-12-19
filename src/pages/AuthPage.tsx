@@ -107,7 +107,7 @@ export default function AuthPage() {
             if (error.message.toLowerCase().includes("confirm")) {
               toast.error("Please verify your email before logging in.");
             } else {
-              toast.error("Invalid email or password.");
+              toast.error("Invalid email or password. Or create an account.");
             }
             return;
           }

@@ -17,8 +17,4 @@ export class SeededRandom {
   nextInt(min: number, max: number): number {
     return Math.floor(this.next() * (max - min + 1)) + min;
   }
-
-  choice<T>(array: T[]): T {
-    return array[this.nextInt(0, array.length - 1)];
-  }
 }

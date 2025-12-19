@@ -37,42 +37,4 @@ export class SpriteLoader {
     return promise;
   }
 
-  /**
-   * Get a cached sprite sheet (throws if not loaded)
-   */
-  static get(src: string): HTMLImageElement {
-    const img = this.cache.get(src);
-    if (!img) {
-      throw new Error(`Sprite not loaded: ${src}. Call SpriteLoader.load() first.`);
-    }
-    return img;
-  }
-
-  /**
-   * Check if a sprite is loaded
-   */
-  static isLoaded(src: string): boolean {
-    return this.cache.has(src);
-  }
-
-  /**
-   * Preload multiple sprite sheets
-   */
-  static async preloadAll(sources: string[]): Promise<HTMLImageElement[]> {
-    return Promise.all(sources.map(src => this.load(src)));
-  }
-
-  /**
-   * Clear the cache
-   */
-  static clearCache(): void {
-    this.cache.clear();
-  }
-
-  /**
-   * Detect if we should use HDPI sprites
-   */
-  static isHDPI(): boolean {
-    return window.devicePixelRatio > 1;
-  }
 }

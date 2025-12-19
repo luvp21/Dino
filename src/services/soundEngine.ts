@@ -11,17 +11,17 @@ class RetroSoundEngine {
 
   private initAudio() {
     if (this.audioContext) return;
-    
+
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
+
     this.masterGain = this.audioContext.createGain();
     this.masterGain.gain.value = 0.3;
     this.masterGain.connect(this.audioContext.destination);
-    
+
     this.musicGain = this.audioContext.createGain();
     this.musicGain.gain.value = 0.15;
     this.musicGain.connect(this.masterGain);
-    
+
     this.sfxGain = this.audioContext.createGain();
     this.sfxGain.gain.value = 0.5;
     this.sfxGain.connect(this.masterGain);
@@ -47,23 +47,23 @@ class RetroSoundEngine {
 
     const osc = this.audioContext.createOscillator();
     const gain = this.audioContext.createGain();
-    
+
     osc.type = type;
     osc.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
-    
+
     if (frequencySlide) {
       osc.frequency.linearRampToValueAtTime(
         frequency + frequencySlide,
         this.audioContext.currentTime + duration
       );
     }
-    
+
     gain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-    
+
     osc.connect(gain);
     gain.connect(gainNode);
-    
+
     osc.start(this.audioContext.currentTime);
     osc.stop(this.audioContext.currentTime + duration);
   }
@@ -90,26 +90,26 @@ class RetroSoundEngine {
     const bufferSize = this.audioContext.sampleRate * 0.2;
     const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
     const data = buffer.getChannelData(0);
-    
+
     for (let i = 0; i < bufferSize; i++) {
       data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.1));
     }
-    
+
     const noise = this.audioContext.createBufferSource();
     noise.buffer = buffer;
-    
+
     const filter = this.audioContext.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 800;
-    
+
     const gain = this.audioContext.createGain();
     gain.gain.setValueAtTime(0.8, this.audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
-    
+
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(this.sfxGain);
-    
+
     noise.start();
   }
 
@@ -117,7 +117,7 @@ class RetroSoundEngine {
   playGameOver() {
     if (!this.sfxEnabled) return;
     this.ensureContext();
-    
+
     const notes = [523, 392, 330, 262]; // C5, G4, E4, C4
     notes.forEach((freq, i) => {
       setTimeout(() => {
@@ -161,7 +161,7 @@ class RetroSoundEngine {
     const bassNotes = [130.81, 98, 110, 82.41];
     // Melody pattern
     const melodyNotes = [262, 330, 392, 330, 262, 294, 330, 294];
-    
+
     const beatDuration = 0.25;
     const patternLength = bassNotes.length * beatDuration * 2;
 
@@ -198,17 +198,17 @@ class RetroSoundEngine {
 
     const osc = this.audioContext.createOscillator();
     const gain = this.audioContext.createGain();
-    
+
     osc.type = type;
     osc.frequency.value = frequency;
-    
+
     gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
     gain.gain.setValueAtTime(0.3, this.audioContext.currentTime + duration * 0.7);
     gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-    
+
     osc.connect(gain);
     gain.connect(this.musicGain);
-    
+
     osc.start(this.audioContext.currentTime);
     osc.stop(this.audioContext.currentTime + duration);
   }
@@ -243,18 +243,6 @@ class RetroSoundEngine {
 
   setSfxEnabled(enabled: boolean) {
     this.sfxEnabled = enabled;
-  }
-
-  isMusicEnabled() {
-    return this.musicEnabled;
-  }
-
-  isSfxEnabled() {
-    return this.sfxEnabled;
-  }
-
-  getMusicPlaying() {
-    return this.isMusicPlaying;
   }
 }
 

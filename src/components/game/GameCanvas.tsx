@@ -10,7 +10,7 @@ interface GameCanvasProps {
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, className }) => {
-  const { canvasRef, isRunning, gameOver, score, coinsEarned } = useGameCanvas({ onGameOver });
+  const { canvasRef, isRunning, gameOver, score, coinsEarned, debugMode } = useGameCanvas({ onGameOver });
   const { profile, currentSkin } = useGameStore();
 
   return (
@@ -38,6 +38,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ onGameOver, className })
       <div className="absolute bottom-2 left-2 text-[8px] text-muted-foreground">
         SKIN: {currentSkin.toUpperCase()}
       </div>
+
+      {/* Debug mode indicator */}
+      {debugMode && (
+        <div className="absolute top-2 right-2 text-[8px] text-red-500 font-pixel bg-black/50 px-2 py-1 rounded">
+          DEBUG MODE (Ctrl+D)
+        </div>
+      )}
 
       {/* Coins earned indicator */}
       {gameOver && coinsEarned > 0 && (

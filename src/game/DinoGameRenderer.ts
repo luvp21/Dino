@@ -14,6 +14,8 @@ import {
 import { SpriteLoader } from './sprites/SpriteLoader';
 import { getSkinConfig, getSpriteDefinition, type SkinConfig } from './sprites/SkinConfig';
 import type { SpriteDefinition, SpriteCoords } from './sprites/SpriteDefinitions';
+import { CollisionBox, OBSTACLE_TYPES, TREX_COLLISION_BOXES, TREX_CONFIG } from './engine';
+import type { CollisionDebugData } from './engine/DinoEngine';
 
 // Extract constants
 const {
@@ -41,6 +43,7 @@ export class DinoGameRenderer {
 
   // animation state
   private groundOffset = 0;
+  private lastFrame = 0;
   private runFrame = 0;
   private pterodactylFrame = 0;
 
@@ -116,14 +119,22 @@ export class DinoGameRenderer {
   // Main frame render loop
   // ================================
 
-  render(state: GameState, localPlayerId?: string): void {
+  render(state: GameState, localPlayerId?: string, collisionDebugData?: CollisionDebugData | null): void {
     const bg = this.skinConfig.backgroundColor || '#fff';
 
     this.ctx.fillStyle = bg;
     this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Animation frame updates
-    this.groundOffset = (this.groundOffset + state.speed) % 24;
+    // Only update ground offset when frame number changes (once per engine update)
+    // This ensures ground scrolls at the same rate as obstacles
+    // Obstacles move at Math.floor(speed) pixels per frame, so ground must match exactly
+    if (state.frame !== this.lastFrame) {
+      const horizon = this.spriteDef.HORIZON;
+      // Match obstacle movement: Math.floor(speed) pixels per frame
+      this.groundOffset = (this.groundOffset + Math.floor(state.speed)) % horizon.w;
+      this.lastFrame = state.frame;
+    }
 
     if (state.frame % 6 === 0) this.runFrame ^= 1;
     if (state.frame % 10 === 0) this.pterodactylFrame ^= 1;
@@ -150,6 +161,11 @@ export class DinoGameRenderer {
 
     this.ctx.filter = 'none';
 
+    // Draw collision boxes in debug mode
+    if (collisionDebugData) {
+      this.drawCollisionBoxes(collisionDebugData);
+    }
+
     this.drawHiScore(state);
 
     if (state.isGameOver) {
@@ -168,7 +184,7 @@ export class DinoGameRenderer {
     }
 
     const horizon = this.spriteDef.HORIZON;
-    const offset = Math.floor(distance * 0.5) % horizon.w;
+    const offset = Math.floor(this.groundOffset) % horizon.w;
 
     const firstWidth = Math.min(horizon.w - offset, CANVAS_WIDTH);
     this.ctx.drawImage(
@@ -202,7 +218,8 @@ export class DinoGameRenderer {
     this.ctx.fillStyle = this.skinConfig.groundColor || '#737373';
     this.ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 2);
 
-    const offset = Math.floor(distance * 0.5) % 600;
+    const horizon = this.spriteDef.HORIZON;
+    const offset = Math.floor(this.groundOffset) % horizon.w;
 
     for (let i = 0; i < CANVAS_WIDTH + 100; i += 3) {
       const hash = (((i + offset) * 2654435761) >>> 0) % 100;
@@ -288,8 +305,16 @@ export class DinoGameRenderer {
   }
 
   private drawDeadDino(player: PlayerGameState, idx: number): void {
-    const x = DINO_X + idx * 8;
-    const y = player.isDucking ? (GROUND_Y - DINO_DUCK_HEIGHT) : player.y;
+    let x = DINO_X + idx * 8;
+    let y = player.isDucking ? (GROUND_Y - DINO_DUCK_HEIGHT) : player.y;
+
+    // When ducking and collision happens, adjust position
+    if (player.isDucking) {
+      x = x + 30;
+      y = y - 30;
+    } else{
+      x = x + 4;
+    }
 
     if (!this.spriteReady || !this.spriteSheet) {
       this.ctx.fillStyle = '#262626';
@@ -329,11 +354,6 @@ export class DinoGameRenderer {
     switch (type) {
       case 'cactus-small': return this.drawCactusSmall(x, y);
       case 'cactus-large': return this.drawCactusLarge(x, y);
-      case 'cactus-group':
-        this.drawCactusSmall(x, y);
-        this.drawCactusSmall(x + 18, y);
-        this.drawCactusSmall(x + 34, y);
-        break;
       case 'pterodactyl': return this.drawPterodactyl(x, y);
     }
   }
@@ -368,6 +388,53 @@ export class DinoGameRenderer {
         h.fillRect(o.x + 8, o.y + 2, 10, 48);
         break;
     }
+  }
+
+  // ================================
+  // Collision Debug Visualization
+  // ================================
+
+  private drawCollisionBoxes(debugData: CollisionDebugData): void {
+    this.ctx.save();
+    this.ctx.filter = 'none';
+
+    // Draw T-Rex bounding box (red outline)
+    this.drawBoundingBox(debugData.tRexBoundingBox, '#FF0000', 2);
+
+    // Draw Obstacle bounding box (blue outline)
+    this.drawBoundingBox(debugData.obstacleBoundingBox, '#0000FF', 2);
+
+    // Draw T-Rex inner collision boxes (red fill with transparency)
+    debugData.tRexCollisionBoxes.forEach(box => {
+      this.drawCollisionBox(box, '#FF0000', 0.3);
+    });
+
+    // Draw Obstacle inner collision boxes (blue fill with transparency)
+    debugData.obstacleCollisionBoxes.forEach(box => {
+      this.drawCollisionBox(box, '#0000FF', 0.3);
+    });
+
+    this.ctx.restore();
+  }
+
+  private drawBoundingBox(box: CollisionBox, color: string, lineWidth: number): void {
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = lineWidth;
+    this.ctx.setLineDash([5, 5]); // Dashed line for bounding boxes
+    this.ctx.strokeRect(box.x, box.y, box.width, box.height);
+    this.ctx.setLineDash([]);
+  }
+
+  private drawCollisionBox(box: CollisionBox, color: string, alpha: number): void {
+    this.ctx.fillStyle = color;
+    this.ctx.globalAlpha = alpha;
+    this.ctx.fillRect(box.x, box.y, box.width, box.height);
+    this.ctx.globalAlpha = 1.0;
+
+    // Draw outline
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(box.x, box.y, box.width, box.height);
   }
 
   // ================================
@@ -406,7 +473,7 @@ export class DinoGameRenderer {
     this.ctx.restore();
   }
 
-  renderStartScreen(skin: SkinType): void {
+  renderStartScreen(skin: SkinType, debugMode: boolean = false): void {
     const cfg = getSkinConfig(skin);
     const fg = cfg.filter ? '#fff' : '#1A1A1A';
 
@@ -439,6 +506,13 @@ export class DinoGameRenderer {
     }
 
     this.ctx.filter = 'none';
+
+    // Draw collision boxes in debug mode
+    if (debugMode) {
+      this.drawStartScreenDinoCollision();
+      this.drawStartScreenObstacles();
+    }
+
     this.ctx.fillStyle = fg;
     this.ctx.textAlign = 'center';
 
@@ -447,5 +521,117 @@ export class DinoGameRenderer {
 
     this.ctx.font = '10px "Press Start 2P", monospace';
     this.ctx.fillText('PRESS SPACE TO START', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40);
+  }
+
+  private drawStartScreenDinoCollision(): void {
+    this.ctx.save();
+    this.ctx.filter = 'none';
+
+    // T-Rex position on start screen (standing/waiting position uses RUNNING collision boxes)
+    const tRexX = DINO_X;
+    const tRexY = DINO_START_Y;
+
+    // Calculate bounding box (same logic as in checkCollision)
+    const tRexBoundingBox = new CollisionBox(
+      tRexX + 1,
+      tRexY + 1,
+      TREX_CONFIG.WIDTH - 2,
+      TREX_CONFIG.HEIGHT - 2
+    );
+
+    // Draw T-Rex bounding box (red dashed outline)
+    this.drawBoundingBox(tRexBoundingBox, '#FF0000', 2);
+
+    // Draw T-Rex inner collision boxes (red filled with transparency)
+    TREX_COLLISION_BOXES.RUNNING.forEach(collisionBox => {
+      const adjustedBox = new CollisionBox(
+        collisionBox.x + tRexBoundingBox.x,
+        collisionBox.y + tRexBoundingBox.y,
+        collisionBox.width,
+        collisionBox.height
+      );
+      this.drawCollisionBox(adjustedBox, '#FF0000', 0.3);
+    });
+
+    // Draw T-Rex label
+    this.ctx.fillStyle = '#FF0000';
+    this.ctx.font = '8px "Press Start 2P", monospace';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('T-REX', tRexX + TREX_CONFIG.WIDTH / 2, tRexY - 5);
+
+    this.ctx.restore();
+  }
+
+  private drawStartScreenObstacles(): void {
+    this.ctx.save();
+    this.ctx.filter = 'none';
+
+    // Starting x position for obstacles
+    let startX = 300;
+    const spacing = 200;
+
+    OBSTACLE_TYPES.forEach((obstacleType, index) => {
+      const x = startX + (index * spacing);
+
+      // Determine y position
+      let y: number;
+      if (Array.isArray(obstacleType.yPos)) {
+        // For pterodactyl, use the middle height
+        y = obstacleType.yPos[Math.floor(obstacleType.yPos.length / 2)];
+      } else {
+        y = obstacleType.yPos;
+      }
+
+      // Draw obstacle sprite if available
+      if (this.spriteReady && this.spriteSheet) {
+        this.drawObstacleSprite(obstacleType, x, y);
+      }
+
+      // Draw bounding box (blue dashed outline)
+      const boundingBox = new CollisionBox(
+        x + 1,
+        y + 1,
+        obstacleType.width - 2,
+        obstacleType.height - 2
+      );
+      this.drawBoundingBox(boundingBox, '#0000FF', 2);
+
+      // Draw inner collision boxes (blue filled with transparency)
+      obstacleType.collisionBoxes.forEach(collisionBox => {
+        const adjustedBox = new CollisionBox(
+          collisionBox.x + boundingBox.x,
+          collisionBox.y + boundingBox.y,
+          collisionBox.width,
+          collisionBox.height
+        );
+        this.drawCollisionBox(adjustedBox, '#0000FF', 0.3);
+      });
+
+      // Draw obstacle type label
+      this.ctx.fillStyle = '#0000FF';
+      this.ctx.font = '8px "Press Start 2P", monospace';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(obstacleType.type, x + obstacleType.width / 2, y - 5);
+    });
+
+    this.ctx.restore();
+  }
+
+  private drawObstacleSprite(obstacleType: (typeof OBSTACLE_TYPES)[number], x: number, y: number): void {
+    if (!this.spriteSheet) return;
+
+    switch (obstacleType.type) {
+      case 'CACTUS_SMALL':
+        this.drawCactusSmall(x, y);
+        break;
+      case 'CACTUS_LARGE':
+        this.drawCactusLarge(x, y);
+        break;
+      case 'PTERODACTYL':
+        // Use frame 1 for start screen
+        const p = this.spriteDef.PTERODACTYL.frame1;
+        this.ctx.drawImage(this.spriteSheet, p.x, p.y, p.w, p.h, x, y, p.w, p.h);
+        break;
+    }
   }
 }

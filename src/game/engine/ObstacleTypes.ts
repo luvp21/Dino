@@ -10,7 +10,6 @@ export interface ObstacleTypeConfig {
   width: number;
   height: number;
   yPos: number | number[];
-  multipleSpeed: number;
   minGap: number;
   minSpeed: number;
   collisionBoxes: CollisionBox[];
@@ -25,46 +24,43 @@ const groundY = ENGINE_CONFIG.GROUND_Y;
 export const OBSTACLE_TYPES: ObstacleTypeConfig[] = [
   {
     type: 'CACTUS_SMALL',
-    width: 17,
-    height: 35,
-    yPos: groundY - 35, // Bottom of cactus on ground
-    multipleSpeed: 4,
+    width: 33,
+    height: 69,
+    yPos: groundY - 70, // Bottom of cactus on ground
     minGap: 120,
     minSpeed: 0,
     collisionBoxes: [
-      new CollisionBox(0, 7, 5, 27),
-      new CollisionBox(4, 0, 6, 34),
-      new CollisionBox(10, 4, 7, 14),
+      new CollisionBox(1, 20, 5, 22),
+      new CollisionBox(11, 4, 10, 60),
+      new CollisionBox(26, 12, 6, 20),
     ],
   },
   {
     type: 'CACTUS_LARGE',
-    width: 25,
-    height: 50,
-    yPos: groundY - 50,
-    multipleSpeed: 7,
+    width: 49,
+    height: 99,
+    yPos: groundY - 95,
     minGap: 120,
     minSpeed: 0,
     collisionBoxes: [
-      new CollisionBox(0, 12, 7, 38),
-      new CollisionBox(8, 0, 7, 49),
-      new CollisionBox(13, 10, 10, 38),
+      new CollisionBox(1, 27, 10, 30),
+      new CollisionBox(18, 3, 13, 60),
+      new CollisionBox(39, 23, 9, 30),
     ],
   },
   {
     type: 'PTERODACTYL',
-    width: 46,
-    height: 40,
+    width: 91,
+    height: 60,
     yPos: [groundY - 60, groundY - 85, groundY - 110], // Low, medium, high
-    multipleSpeed: 999, // Never spawn multiples
     minSpeed: 8.5,
     minGap: 150,
     collisionBoxes: [
-      new CollisionBox(15, 15, 16, 5),
-      new CollisionBox(18, 21, 24, 6),
-      new CollisionBox(2, 14, 4, 3),
-      new CollisionBox(6, 10, 4, 7),
-      new CollisionBox(10, 8, 6, 9),
+      new CollisionBox(28, 20, 34, 7),
+      new CollisionBox(36, 28, 48, 12),
+      new CollisionBox(20, 4, 8, 20),
+      new CollisionBox(4, 20, 10, 4),
+      new CollisionBox(12, 12, 14, 12),
     ],
     numFrames: 2,
     frameRate: 1000 / 6,
@@ -73,13 +69,6 @@ export const OBSTACLE_TYPES: ObstacleTypeConfig[] = [
 ];
 
 export function cloneCollisionBoxes(boxes: CollisionBox[], size: number): CollisionBox[] {
-  const cloned = boxes.map(box => box.clone());
-
-  // Adjust collision boxes for grouped obstacles
-  if (size > 1 && cloned.length >= 3) {
-    cloned[1].width = boxes[0].width * size - boxes[0].width - boxes[2].width;
-    cloned[2].x = boxes[0].width * size - boxes[2].width;
-  }
-
-  return cloned;
+  // Size is always 1 now (no stacking), so just clone the boxes
+  return boxes.map(box => box.clone());
 }

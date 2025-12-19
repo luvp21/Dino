@@ -1,7 +1,7 @@
 /**
  * Chrome Dino Engine - Public API
  */
-export { DinoEngine } from './DinoEngine';
+export { DinoEngine, type CollisionDebugData } from './DinoEngine';
 export { ENGINE_CONFIG, FPS } from './config';
 export { CollisionBox } from './CollisionBox';
 export { OBSTACLE_TYPES, type ObstacleTypeConfig } from './ObstacleTypes';

@@ -9,7 +9,6 @@ import { soundEngine } from '@/services/soundEngine';
 
 interface UseGameCanvasOptions {
   onGameOver?: (score: number) => void;
-  isSinglePlayer?: boolean;
 }
 
 // Convert new engine state to renderer-compatible format
@@ -27,7 +26,7 @@ function convertEngineStateToGameState(
     id: o.id,
     type: o.type === 'CACTUS_SMALL' ? 'cactus-small' :
           o.type === 'CACTUS_LARGE' ? 'cactus-large' :
-          o.type === 'PTERODACTYL' ? 'pterodactyl' : 'cactus-group',
+          'pterodactyl',
     x: o.x,
     y: o.y,
     width: o.width,
@@ -74,6 +73,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
+  const [debugMode, setDebugMode] = useState(false);
 
   const FRAME_TIME = 1000 / FPS;
 
@@ -112,6 +112,9 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     if (!canvasRef.current) return;
 
     engineRef.current = new DinoEngine(Date.now());
+    if (engineRef.current) {
+      engineRef.current.setDebugMode(debugMode);
+    }
 
     if (!rendererRef.current) {
       rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
@@ -121,12 +124,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
 
     await rendererRef.current.waitUntilReady();
 
-    rendererRef.current.renderStartScreen(currentSkin);
+    rendererRef.current.renderStartScreen(currentSkin, debugMode);
 
     setGameOver(false);
     setIsRunning(false);
     setScore(0);
-  }, [currentSkin]);
+  }, [currentSkin, debugMode]);
 
   // Game loop
   const gameLoop = useCallback((timestamp: number) => {
@@ -160,7 +163,8 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
           profile.username,
           currentSkin
         );
-        rendererRef.current.render(finalState, profile.id);
+        const collisionDebugData = engineRef.current.getCollisionDebugData();
+        rendererRef.current.render(finalState, profile.id, collisionDebugData);
 
         // Award coins for distance traveled (only for authenticated users)
         // Guests get no-op - awardCoins will return 0 for guests
@@ -180,7 +184,8 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       profile.username,
       currentSkin
     );
-    rendererRef.current.render(state, profile.id);
+    const collisionDebugData = engineRef.current.getCollisionDebugData();
+    rendererRef.current.render(state, profile.id, collisionDebugData);
     setScore(state.distance);
 
     if (isRunning && !gameOver) {
@@ -240,6 +245,9 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
 
     const seed = Date.now();
     engineRef.current = new DinoEngine(seed);
+    if (engineRef.current) {
+      engineRef.current.setDebugMode(debugMode);
+    }
 
     if (!rendererRef.current) {
       rendererRef.current = new DinoGameRenderer(canvasRef.current, currentSkin);
@@ -263,6 +271,17 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle debug mode with 'D' key
+      if (e.code === 'KeyD' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const newDebugMode = !debugMode;
+        setDebugMode(newDebugMode);
+        if (engineRef.current) {
+          engineRef.current.setDebugMode(newDebugMode);
+        }
+        return;
+      }
+
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         if (gameOver) {
@@ -290,7 +309,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleInput, restartAndPlay, gameOver]);
+  }, [handleInput, restartAndPlay, gameOver, debugMode]);
 
   // Touch controls
   useEffect(() => {
@@ -326,6 +345,17 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     };
   }, [handleInput, restartAndPlay, gameOver]);
 
+  // Update debug mode when it changes
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setDebugMode(debugMode);
+    }
+    // Re-render start screen if game is not running
+    if (rendererRef.current && !isRunning && !gameOver) {
+      rendererRef.current.renderStartScreen(currentSkin, debugMode);
+    }
+  }, [debugMode, isRunning, gameOver, currentSkin]);
+
   // Initialize on mount when profile is available
   useEffect(() => {
     if (!profile) return;
@@ -354,6 +384,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     gameOver,
     score,
     coinsEarned,
+    debugMode,
     startGame,
     restartGame,
     handleInput,

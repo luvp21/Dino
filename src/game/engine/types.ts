@@ -56,19 +56,4 @@ export interface EngineGameState {
   groundOffset: number;
 }
 
-export interface PlayerEngineState {
-  id: string;
-  name: string;
-  tRex: TRexState;
-  isAlive: boolean;
-  score: number;
-  color: string;
-}
-
 export type InputAction = 'jump' | 'duck_start' | 'duck_end' | 'none';
-
-export interface FrameInput {
-  frame: number;
-  action: InputAction;
-  playerId: string;
-}

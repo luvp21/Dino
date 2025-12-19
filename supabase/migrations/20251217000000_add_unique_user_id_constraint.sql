@@ -38,3 +38,5 @@ WHERE user_id IS NOT NULL;
 COMMENT ON INDEX idx_profiles_user_id_unique IS
 'Ensures only one profile per authenticated user. Guest profiles (user_id IS NULL) are not constrained.';
 
+
+
