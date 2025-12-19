@@ -1,121 +1,71 @@
-// =============================================
-// SKIN CONFIGURATION - HYBRID ARCHITECTURE
-// =============================================
-// Filter-Based Skins: Use CSS filters on classic sprite sheet
-// Sprite-Based Skins: Use custom sprite sheets (future premium skins)
-// =============================================
-
 import type { SkinType } from '@/types/game';
 import { CLASSIC_SPRITE_DEFINITION, CLASSIC_SPRITE_DEFINITION_LDPI, type SpriteDefinition } from './SpriteDefinitions';
 
 export type SkinRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export interface SkinConfig {
-  // Required: sprite sheet paths and definitions
-  spriteSheet?: string; // LDPI sprite sheet
-  spriteSheetHDPI?: string; // HDPI sprite sheet (optional, falls back to spriteSheet)
+  spriteSheet?: string;
+  spriteSheetHDPI?: string;
   definition: SpriteDefinition;
   definitionHDPI: SpriteDefinition;
 
-  // Rarity tier for shop pricing
   rarity: SkinRarity;
 
-  // Optional: CSS filter for color-based skins
   filter?: string;
 
-  // Optional: custom background/ground colors
   backgroundColor?: string;
   groundColor?: string;
+
+  // Optional preview image path (relative to /public folder)
+  // If provided, this image will be used in the shop instead of rendering the canvas
+  previewImage?: string;
 }
 
-// =============================================
-// FILTER-BASED SKINS
-// All use classic sprite sheet with CSS filters
-// =============================================
-
 const CLASSIC_BASE = {
-  spriteSheet: '/200-offline-sprite.png', // LDPI sprite sheet
-  spriteSheetHDPI: '/200-offline-sprite.png', // HDPI sprite sheet
+  spriteSheet: '/200-offline-sprite.png',
+  spriteSheetHDPI: '/200-offline-sprite.png',
   definition: CLASSIC_SPRITE_DEFINITION_LDPI,
   definitionHDPI: CLASSIC_SPRITE_DEFINITION,
 };
 
-export const SKIN_CONFIGS: Record<SkinType, SkinConfig> = {
-  // === COMMON (Free) ===
+// common, rare, epic, legendary
+// common: free
+// rare: 100 coins
+// epic: 200 coins
+// legendary: 500 coins
+
+export const SKIN_CONFIGS: Partial<Record<string, SkinConfig>> = {
   classic: {
     ...CLASSIC_BASE,
     rarity: 'common',
+    previewImage: 'prv/classic-prv.png',
   },
 
-  // === RARE ===
-  inverted: {
+  blue: {
+    ...CLASSIC_BASE,
+    spriteSheet: '/blue.png',
+    rarity: 'common',
+    previewImage: '/prv/blue-prv.png',
+  },
+
+  red: {
     ...CLASSIC_BASE,
     spriteSheet: '/red.png',
-    rarity: 'rare',
-    filter: 'invert(1)',
-    backgroundColor: '#1A1A1A',
+    rarity: 'common',
+    previewImage: '/prv/red-prv.png',
   },
 
-  phosphor: {
-    ...CLASSIC_BASE,
-    rarity: 'rare',
-    filter: 'sepia(1) saturate(10) hue-rotate(90deg)',
-    backgroundColor: '#001A00',
-    groundColor: '#004400',
-  },
 
-  amber: {
-    ...CLASSIC_BASE,
-    rarity: 'rare',
-    filter: 'sepia(1) saturate(5) hue-rotate(15deg)',
-    backgroundColor: '#1A0D00',
-    groundColor: '#4D2600',
-  },
-
-  // === EPIC ===
-  crt: {
-    ...CLASSIC_BASE,
-    rarity: 'epic',
-    filter: 'contrast(1.1) brightness(0.9)',
-    backgroundColor: '#141414',
-  },
-
-  winter: {
-    ...CLASSIC_BASE,
-    rarity: 'epic',
-    filter: 'saturate(0.7) brightness(1.1) hue-rotate(190deg)',
-    backgroundColor: '#1a2a3a',
-    groundColor: '#4a6a8a',
-  },
-
-  neon: {
-    spriteSheet: '/red.png',
-    spriteSheetHDPI: '/red.png', // Same sprite sheet for both
-    definition: CLASSIC_SPRITE_DEFINITION_LDPI,
-    definitionHDPI: CLASSIC_SPRITE_DEFINITION,
-    rarity: 'epic',
-  },
-
-  // === LEGENDARY ===
-  golden: {
-    ...CLASSIC_BASE,
-    rarity: 'legendary',
-    filter: 'sepia(1) saturate(3) hue-rotate(15deg) brightness(1.2)',
-    backgroundColor: '#1A1500',
-    groundColor: '#3D3200',
-  },
 };
 
-/**
- * Get the skin config for a given skin type
- */
+
 export function getSkinConfig(skin: SkinType): SkinConfig {
-  return SKIN_CONFIGS[skin] || SKIN_CONFIGS.classic;
+  return SKIN_CONFIGS[skin] || SKIN_CONFIGS.classic || {
+    ...CLASSIC_BASE,
+    rarity: 'common' as SkinRarity,
+  };
 }
 
-/**
- * Get the appropriate sprite definition based on device pixel ratio
- */
 export function getSpriteDefinition(skin: SkinType, isHDPI: boolean = false): SpriteDefinition {
   const config = getSkinConfig(skin);
   return isHDPI ? config.definitionHDPI : config.definition;

@@ -3,7 +3,9 @@
 // Deterministic Multiplayer Architecture
 // =============================================
 
-export type SkinType = 'classic' | 'inverted' | 'phosphor' | 'amber' | 'crt' | 'winter' | 'neon' | 'golden';
+// SkinType is now a string to allow any skin from the database
+// Unknown skins will fall back to 'classic' in the renderer
+export type SkinType = string;
 
 // =============================================
 // PROFILE TYPES - Guest vs Authenticated User

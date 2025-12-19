@@ -361,7 +361,7 @@ export const useGameStore = create<GameStore>()(
               const ownedSkins = ownedSkinsData?.map((s: any) => s.skin_id) ?? [];
 
               // Prioritize persisted skin if it differs from database
-              const skinToUse = persistedSkin !== authProfile.skin ? persistedSkin : (authProfile.skin as SkinType);
+              const skinToUse = persistedSkin !== authProfile.skin ? persistedSkin : authProfile.skin;
 
               // Update profile skin in database if changed
               if (skinToUse !== authProfile.skin) {
@@ -634,7 +634,7 @@ export const useGameStore = create<GameStore>()(
               rank: Number(row.rank),
               playerId: row.profile_id,
               username: row.username,
-              skin: row.skin as SkinType,
+              skin: row.skin,
               bestDistance: row.best_distance,
               totalMatches: row.total_matches,
             }));

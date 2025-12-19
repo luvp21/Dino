@@ -130,7 +130,7 @@ export function useAuth() {
         setProfile({
           id: profile.id,
           username: profile.username,
-          skin: profile.skin as SkinType,
+          skin: profile.skin,
           totalMatches: profile.total_matches,
           bestDistance: profile.best_distance,
           averageDistance: profile.average_distance,

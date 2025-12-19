@@ -4,7 +4,8 @@ import { PixelButton } from '@/components/ui/PixelButton';
 import { useGameStore } from '@/store/gameStore';
 import type { LeaderboardEntry, SkinType } from '@/types/game';
 
-const SKIN_SYMBOLS: Record<SkinType, string> = {
+// Skin symbols - unknown skins will show a default symbol
+const SKIN_SYMBOLS: Record<string, string> = {
   classic: '■',
   inverted: '□',
   phosphor: '◈',
@@ -13,6 +14,11 @@ const SKIN_SYMBOLS: Record<SkinType, string> = {
   winter: '❄',
   neon: '◎',
   golden: '★',
+  blue: '●',
+};
+
+const getSkinSymbol = (skin: string): string => {
+  return SKIN_SYMBOLS[skin] || '■'; // Default to classic symbol
 };
 
 const LeaderboardPage: React.FC = () => {
@@ -31,10 +37,10 @@ const LeaderboardPage: React.FC = () => {
 
   const displayLeaderboard = React.useMemo(() => {
     if (!profile || profile.bestDistance === 0) return leaderboard;
-    
+
     const profileInBoard = leaderboard.some(e => e.playerId === profile.id);
     if (profileInBoard) return leaderboard;
-    
+
     const allEntries = [
       ...leaderboard,
       {
@@ -46,7 +52,7 @@ const LeaderboardPage: React.FC = () => {
         totalMatches: profile.totalMatches,
       }
     ];
-    
+
     return allEntries
       .sort((a, b) => b.bestDistance - a.bestDistance)
       .map((entry, index) => ({ ...entry, rank: index + 1 }))
@@ -102,7 +108,7 @@ const LeaderboardPage: React.FC = () => {
                 >
                   <span className="w-12 font-bold">{entry.rank === 1 && '> '}#{entry.rank}</span>
                   <span className="flex-1 text-left flex items-center gap-2">
-                    <span className="text-muted-foreground">{SKIN_SYMBOLS[entry.skin]}</span>
+                    <span className="text-muted-foreground">{getSkinSymbol(entry.skin)}</span>
                     <span className={isCurrentPlayer ? 'animate-pulse-pixel' : ''}>{entry.username}</span>
                     {isCurrentPlayer && <span className="text-[6px] text-muted-foreground">(YOU)</span>}
                   </span>

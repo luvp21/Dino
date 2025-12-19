@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameStore } from '@/store/gameStore';
@@ -8,7 +8,9 @@ import { PixelButton } from '@/components/ui/PixelButton';
 import { toast } from 'sonner';
 import { Coins, Star, Snowflake, Sparkles, Crown, Lock, Check, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isGuestProfile } from '@/types/game';
+import { isGuestProfile, type SkinType, GAME_CONFIG } from '@/types/game';
+import { DinoGameRenderer } from '@/game/DinoGameRenderer';
+import { getSkinConfig } from '@/game/sprites/SkinConfig';
 
 interface Skin {
   id: string;
@@ -36,11 +38,7 @@ export default function ShopPage() {
   // Check if user is guest
   const isGuest = profile ? isGuestProfile(profile) : true;
 
-  useEffect(() => {
-    loadShopData();
-  }, [profileId, isAuthenticated]);
-
-  const loadShopData = async () => {
+  const loadShopData = useCallback(async () => {
     setLoading(true);
     try {
       // Load all skins
@@ -71,7 +69,11 @@ export default function ShopPage() {
       console.error('Error loading shop data:', error);
     }
     setLoading(false);
-  };
+  }, [profileId, isAuthenticated, isGuest, getCurrency, getOwnedSkins]);
+
+  useEffect(() => {
+    loadShopData();
+  }, [loadShopData]);
 
   const handlePurchase = async (skin: Skin) => {
     // Guard: Only authenticated users can purchase
@@ -97,15 +99,16 @@ export default function ShopPage() {
       } else {
         toast.error('Purchase failed - check your coins');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Purchase failed');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Purchase failed';
+      toast.error(message);
     }
     setPurchasing(null);
   };
 
   const handleEquip = (skinKey: string) => {
     // Both guests and users can equip skins (visual only)
-    setSkin(skinKey as any);
+    setSkin(skinKey);
     toast.success(`Equipped ${skinKey.toUpperCase()}`);
   };
 
@@ -246,6 +249,56 @@ export default function ShopPage() {
   );
 }
 
+// Skin Preview Component - uses preview image if available, otherwise renders canvas
+const SkinPreview: React.FC<{ skinKey: string }> = ({ skinKey }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<DinoGameRenderer | null>(null);
+  const skin = skinKey as SkinType;
+  const config = getSkinConfig(skin);
+
+  // Always call hooks in the same order
+  useEffect(() => {
+    // Only render canvas if no preview image is provided
+    if (config.previewImage || !canvasRef.current) return;
+
+    if (!rendererRef.current) {
+      rendererRef.current = new DinoGameRenderer(canvasRef.current, skin);
+    } else {
+      rendererRef.current.setSkin(skin);
+    }
+
+    rendererRef.current.renderStartScreen(skin);
+  }, [skinKey, skin, config.previewImage]);
+
+  // If preview image is provided, use it instead of canvas rendering
+  if (config.previewImage) {
+    return (
+      <img
+        src={config.previewImage}
+        alt={`${skinKey} skin preview`}
+        className="w-full h-full object-contain"
+        style={{
+          aspectRatio: `${GAME_CONFIG.CANVAS_WIDTH}/${GAME_CONFIG.CANVAS_HEIGHT}`,
+          imageRendering: 'pixelated',
+        }}
+      />
+    );
+  }
+
+  // Otherwise, render using the game renderer
+  return (
+    <canvas
+      ref={canvasRef}
+      className="w-full h-full"
+      style={{
+        aspectRatio: `${GAME_CONFIG.CANVAS_WIDTH}/${GAME_CONFIG.CANVAS_HEIGHT}`,
+        height: "auto",
+        imageRendering: 'pixelated',
+      }}
+    />
+  );
+};
+
 function SkinCard({
   skin,
   isOwned,
@@ -267,8 +320,6 @@ function SkinCard({
   onPurchase: () => void;
   onEquip: () => void;
 }) {
-  const preview = SKIN_PREVIEWS[skin.skin_key] || SKIN_PREVIEWS.classic;
-
   return (
     <div
       className={cn(
@@ -298,19 +349,8 @@ function SkinCard({
       )}
 
       {/* Skin Preview */}
-      <div
-        className="w-full aspect-video mb-3 flex items-center justify-center rounded"
-        style={{ backgroundColor: preview.bg }}
-      >
-        {/* Simple dino silhouette */}
-        <svg width="48" height="48" viewBox="0 0 48 48" fill={preview.dino}>
-          <rect x="20" y="8" width="20" height="20" />
-          <rect x="32" y="4" width="12" height="12" />
-          <rect x="8" y="16" width="16" height="8" />
-          <rect x="4" y="12" width="8" height="8" />
-          <rect x="24" y="28" width="6" height="12" />
-          <rect x="34" y="28" width="6" height="12" />
-        </svg>
+      <div className="w-full aspect-video mb-3 rounded overflow-hidden border-2 border-border bg-background">
+        <SkinPreview skinKey={skin.skin_key} />
       </div>
 
       {/* Skin Info */}
@@ -385,15 +425,4 @@ const RARITY_GLOW = {
   rare: 'shadow-blue-500/20',
   epic: 'shadow-purple-500/30',
   legendary: 'shadow-yellow-500/40 animate-pulse',
-};
-
-const SKIN_PREVIEWS: Record<string, { bg: string; fg: string; dino: string }> = {
-  classic: { bg: '#FFFFFF', fg: '#1A1A1A', dino: '#262626' },
-  inverted: { bg: '#1A1A1A', fg: '#F2F2F2', dino: '#F2F2F2' },
-  phosphor: { bg: '#001A00', fg: '#00FF00', dino: '#00FF00' },
-  amber: { bg: '#1A0D00', fg: '#FFBF00', dino: '#FFBF00' },
-  crt: { bg: '#141414', fg: '#D9D9D9', dino: '#D9D9D9' },
-  winter: { bg: '#0A1929', fg: '#81D4FA', dino: '#4FC3F7' },
-  neon: { bg: '#0D0D0D', fg: '#FF00FF', dino: '#E74C3C' },
-  golden: { bg: '#1A1500', fg: '#FFD700', dino: '#FFC107' },
 };
