@@ -38,6 +38,3 @@ export const ENGINE_CONFIG = {
   GROUND_HEIGHT: 12, // Height of horizon sprite
 } as const;
 
-export const DEBUG = {
-  SHOW_HITBOXES: false,
-};

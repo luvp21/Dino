@@ -217,14 +217,28 @@ export default function AuthPage() {
         <h1 className="text-2xl font-pixel text-center">{titleMap[mode]}</h1>
 
         {(mode === "login" || mode === "signup") && (
-          <button
-            onClick={signInWithGoogle}
+          <PixelButton
+            onClick={async () => {
+              setIsSubmitting(true);
+              try {
+                const { error } = await signInWithGoogle();
+                if (error) {
+                  toast.error(error.message || "Failed to sign in with Google");
+                }
+              } catch (err) {
+                toast.error("An error occurred while signing in with Google");
+                console.error(err);
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
             disabled={isSubmitting}
-            className="w-full flex items-center justify-center gap-2 border-2 p-3 font-pixel"
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
           >
             <Chrome className="w-4 h-4" />
             CONTINUE WITH GOOGLE
-          </button>
+          </PixelButton>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">

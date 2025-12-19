@@ -77,9 +77,18 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
 
   const FRAME_TIME = 1000 / FPS;
 
-  // Award coins after game
+  // Award coins after game - ONLY for authenticated users
+  // Guests get no-op (no coins earned)
   const awardCoins = useCallback(async (distance: number) => {
-    if (!profileId) return 0;
+    // Guard: Only award coins for authenticated users
+    if (!profileId || !profile) return 0;
+
+    // Check if user is guest (guests cannot earn coins)
+    const { isGuest } = profile;
+    if (isGuest) {
+      console.warn('Guests cannot earn coins - login required');
+      return 0;
+    }
 
     try {
       const { data, error } = await supabase.rpc('award_coins', {
@@ -96,7 +105,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       console.error('Error awarding coins:', error);
     }
     return 0;
-  }, [profileId]);
+  }, [profileId, profile]);
 
   // Initialize game
   const initGame = useCallback(async () => {
@@ -153,7 +162,8 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
         );
         rendererRef.current.render(finalState, profile.id);
 
-        // Award coins for distance traveled
+        // Award coins for distance traveled (only for authenticated users)
+        // Guests get no-op - awardCoins will return 0 for guests
         awardCoins(finalScore).then((coins) => {
           if (coins > 0) {
             soundEngine.playCoin();

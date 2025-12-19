@@ -30,10 +30,10 @@ const ProfilePage: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     }).toUpperCase();
   };
 
@@ -87,9 +87,9 @@ const ProfilePage: React.FC = () => {
                 <PixelButton size="sm" onClick={handleSaveUsername}>
                   SAVE
                 </PixelButton>
-                <PixelButton 
-                  size="sm" 
-                  variant="outline" 
+                <PixelButton
+                  size="sm"
+                  variant="outline"
                   onClick={() => {
                     setIsEditing(false);
                     setNewUsername(profile.username);
@@ -200,14 +200,19 @@ const ProfilePage: React.FC = () => {
           </p>
         </PixelCard>
       ) : (
-        <PixelCard className="text-center border-destructive">
+        <PixelCard className="text-center border-yellow-500 bg-yellow-500/10">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <User className="w-4 h-4 text-yellow-500" />
+            <span className="text-[10px] text-yellow-500">GUEST MODE</span>
+          </div>
           <p className="text-[8px] text-muted-foreground mb-3">
-            WARNING: GUEST PROFILES ARE STORED LOCALLY.
-            CLEARING BROWSER DATA WILL ERASE YOUR PROGRESS.
+            GUEST PLAYERS CANNOT EARN OR STORE CURRENCY AND SKINS.
+            YOUR STATS ARE TEMPORARY AND WILL RESET ON PAGE REFRESH.
+            LOGIN TO SAVE PROGRESS, EARN COINS, AND UNLOCK SKINS.
           </p>
           <Link to="/auth">
             <PixelButton variant="primary" size="sm">
-              SIGN UP TO SAVE PROGRESS
+              LOGIN TO EARN COINS & UNLOCK SKINS
             </PixelButton>
           </Link>
         </PixelCard>

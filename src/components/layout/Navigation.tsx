@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -61,7 +60,7 @@ export const Navigation: React.FC = () => {
                 </span>
               </div>
             )}
-            
+
             {!loading && (
               isAuthenticated ? (
                 <button

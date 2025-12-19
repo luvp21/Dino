@@ -11,17 +11,18 @@ import { CLASSIC_SPRITE_DEFINITION, CLASSIC_SPRITE_DEFINITION_LDPI, type SpriteD
 export type SkinRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export interface SkinConfig {
-  // Required: sprite sheet and definitions
-  spriteSheet: string;
+  // Required: sprite sheet paths and definitions
+  spriteSheet?: string; // LDPI sprite sheet
+  spriteSheetHDPI?: string; // HDPI sprite sheet (optional, falls back to spriteSheet)
   definition: SpriteDefinition;
   definitionHDPI: SpriteDefinition;
-  
+
   // Rarity tier for shop pricing
   rarity: SkinRarity;
-  
+
   // Optional: CSS filter for color-based skins
   filter?: string;
-  
+
   // Optional: custom background/ground colors
   backgroundColor?: string;
   groundColor?: string;
@@ -33,7 +34,8 @@ export interface SkinConfig {
 // =============================================
 
 const CLASSIC_BASE = {
-  spriteSheet: '/offline-sprite.png',
+  spriteSheet: '/offline-sprite.png', // LDPI sprite sheet
+  spriteSheetHDPI: '/200-offline-sprite.png', // HDPI sprite sheet
   definition: CLASSIC_SPRITE_DEFINITION_LDPI,
   definitionHDPI: CLASSIC_SPRITE_DEFINITION,
 };
@@ -44,15 +46,16 @@ export const SKIN_CONFIGS: Record<SkinType, SkinConfig> = {
     ...CLASSIC_BASE,
     rarity: 'common',
   },
-  
+
   // === RARE ===
   inverted: {
     ...CLASSIC_BASE,
+    spriteSheet: '/red.png',
     rarity: 'rare',
     filter: 'invert(1)',
     backgroundColor: '#1A1A1A',
   },
-  
+
   phosphor: {
     ...CLASSIC_BASE,
     rarity: 'rare',
@@ -60,7 +63,7 @@ export const SKIN_CONFIGS: Record<SkinType, SkinConfig> = {
     backgroundColor: '#001A00',
     groundColor: '#004400',
   },
-  
+
   amber: {
     ...CLASSIC_BASE,
     rarity: 'rare',
@@ -68,7 +71,7 @@ export const SKIN_CONFIGS: Record<SkinType, SkinConfig> = {
     backgroundColor: '#1A0D00',
     groundColor: '#4D2600',
   },
-  
+
   // === EPIC ===
   crt: {
     ...CLASSIC_BASE,
@@ -76,7 +79,7 @@ export const SKIN_CONFIGS: Record<SkinType, SkinConfig> = {
     filter: 'contrast(1.1) brightness(0.9)',
     backgroundColor: '#141414',
   },
-  
+
   winter: {
     ...CLASSIC_BASE,
     rarity: 'epic',
@@ -84,14 +87,15 @@ export const SKIN_CONFIGS: Record<SkinType, SkinConfig> = {
     backgroundColor: '#1a2a3a',
     groundColor: '#4a6a8a',
   },
-  
+
   neon: {
-    ...CLASSIC_BASE,
+    spriteSheet: '/red.png',
+    spriteSheetHDPI: '/red.png', // Same sprite sheet for both
+    definition: CLASSIC_SPRITE_DEFINITION_LDPI,
+    definitionHDPI: CLASSIC_SPRITE_DEFINITION,
     rarity: 'epic',
-    filter: 'sepia(1) saturate(10) hue-rotate(270deg)',
-    backgroundColor: '#0D0D0D',
   },
-  
+
   // === LEGENDARY ===
   golden: {
     ...CLASSIC_BASE,
@@ -115,6 +119,17 @@ export function getSkinConfig(skin: SkinType): SkinConfig {
 export function getSpriteDefinition(skin: SkinType, isHDPI: boolean = false): SpriteDefinition {
   const config = getSkinConfig(skin);
   return isHDPI ? config.definitionHDPI : config.definition;
+}
+
+/**
+ * Get the appropriate sprite sheet path based on device pixel ratio
+ */
+export function getSpriteSheetPath(skin: SkinType, isHDPI: boolean = false): string {
+  const config = getSkinConfig(skin);
+  if (isHDPI && config.spriteSheetHDPI) {
+    return config.spriteSheetHDPI;
+  }
+  return config.spriteSheet || '/offline-sprite.png';
 }
 
 /**

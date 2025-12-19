@@ -1,8 +1,74 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameStore } from "@/store/gameStore";
-import type { SkinType } from "@/types/game";
+import type { SkinType, GuestProfile } from "@/types/game";
+import { getOrCreateProfile, getProfileWithDetails } from "@/services/profileService";
+
+// Guest profile key for localStorage (persists across page refreshes)
+const GUEST_PROFILE_KEY = 'pixel-dino-guest-profile';
+
+// Get guest profile from localStorage
+const getGuestProfileFromStorage = (): GuestProfile | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const stored = localStorage.getItem(GUEST_PROFILE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Validate that it's a guest profile
+      if (parsed && parsed.isGuest === true) {
+        return parsed as GuestProfile;
+      }
+    }
+  } catch (error) {
+    console.error('Error reading guest profile from localStorage:', error);
+  }
+
+  return null;
+};
+
+// Save guest profile to localStorage
+const saveGuestProfileToStorage = (profile: GuestProfile) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(profile));
+  } catch (error) {
+    console.error('Error saving guest profile to localStorage:', error);
+  }
+};
+
+// Get or create guest profile from localStorage
+// This ensures the same guest profile is used across page refreshes
+const getOrCreateGuestProfile = (): GuestProfile => {
+  // Try to load existing guest profile from localStorage
+  const existingProfile = getGuestProfileFromStorage();
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  // Generate new guest profile if none exists
+  const newProfile: GuestProfile = {
+    id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    username: `DINO_${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+    skin: 'classic',
+    totalMatches: 0,
+    bestDistance: 0,
+    averageDistance: 0,
+    totalPlaytime: 0,
+    joinDate: new Date().toISOString(),
+    isGuest: true,
+    // Explicitly no currency or ownedSkins - guests cannot have these
+  };
+
+  // Save to localStorage for persistence
+  saveGuestProfileToStorage(newProfile);
+
+  return newProfile;
+};
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -11,105 +77,71 @@ export function useAuth() {
 
   const { setProfile, setProfileId, currentSkin } = useGameStore();
 
+  // Track if we've already loaded the profile for this user
+  // This prevents multiple calls when auth state changes multiple times
+  const loadedProfileForUserId = useRef<string | null>(null);
+
   /* --------------------------------------------------
-   * Sync profile AFTER email is confirmed
+   * Load profile for authenticated user
+   *
+   * This function:
+   * - Only runs for authenticated users (email confirmed)
+   * - Uses getOrCreateProfile() to ensure only ONE profile per user
+   * - Only runs ONCE per user (tracked by loadedProfileForUserId)
+   * - NEVER creates profiles for guests
    * -------------------------------------------------- */
-  const syncAuthProfile = useCallback(
+  const loadUserProfile = useCallback(
     async (authUser: User) => {
-      if (!authUser.email_confirmed_at) return;
+      // Guard: Only process if email is confirmed
+      if (!authUser.email_confirmed_at) {
+        return;
+      }
+
+      // Guard: Only load once per user
+      if (loadedProfileForUserId.current === authUser.id) {
+        return;
+      }
 
       try {
-        // 1️⃣ Existing authenticated profile
-        const { data: existingProfile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", authUser.id)
-          .maybeSingle();
+        // Use getOrCreateProfile to ensure only one profile exists
+        // This function handles race conditions and prevents duplicates
+        const profileRow = await getOrCreateProfile(authUser.id, currentSkin);
 
-        if (existingProfile) {
-          setProfileId(existingProfile.id);
-          setProfile({
-            id: existingProfile.id,
-            username: existingProfile.username,
-            skin: existingProfile.skin as SkinType,
-            totalMatches: existingProfile.total_matches,
-            bestDistance: existingProfile.best_distance,
-            averageDistance: existingProfile.average_distance,
-            totalPlaytime: existingProfile.total_playtime,
-            joinDate: existingProfile.created_at,
-            isGuest: false,
-          });
+        if (!profileRow) {
+          console.error("Failed to get or create profile for user:", authUser.id);
           return;
         }
 
-        // 2️⃣ CLAIM GUEST PROFILE (🔥 THIS IS THE KEY PART)
-        const guestProfile = useGameStore.getState().profile;
-        const guestProfileId = useGameStore.getState().profileId;
+        // Mark that we've loaded the profile for this user
+        loadedProfileForUserId.current = authUser.id;
 
-        if (guestProfile && guestProfile.isGuest && guestProfileId) {
-          const { data: upgradedProfile, error } = await supabase
-            .from("profiles")
-            .update({
-              user_id: authUser.id,
-              is_guest: false,
-            })
-            .eq("id", guestProfileId)
-            .select()
-            .single();
+        // Load profile with currency and owned skins
+        const profileDetails = await getProfileWithDetails(authUser.id);
 
-          if (!error && upgradedProfile) {
-            setProfileId(upgradedProfile.id);
-            setProfile({
-              id: upgradedProfile.id,
-              username: upgradedProfile.username,
-              skin: upgradedProfile.skin as SkinType,
-              totalMatches: upgradedProfile.total_matches,
-              bestDistance: upgradedProfile.best_distance,
-              averageDistance: upgradedProfile.average_distance,
-              totalPlaytime: upgradedProfile.total_playtime,
-              joinDate: upgradedProfile.created_at,
-              isGuest: false,
-            });
-            return;
-          }
+        if (!profileDetails) {
+          console.error("Failed to load profile details for user:", authUser.id);
+          return;
         }
 
-        // 3️⃣ FALLBACK: create brand new profile (rare case)
-        const username =
-          authUser.user_metadata?.name
-            ?.toUpperCase()
-            .replace(/[^A-Z0-9_]/g, "")
-            .slice(0, 10) ||
-          authUser.email?.split("@")[0]?.toUpperCase().slice(0, 10) ||
-          `DINO_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const { profile, currency, ownedSkins } = profileDetails;
 
-        const { data: newProfile, error } = await supabase
-          .from("profiles")
-          .insert({
-            username,
-            skin: currentSkin || "classic",
-            is_guest: false,
-            user_id: authUser.id,
-          })
-          .select()
-          .single();
-
-        if (!error && newProfile) {
-          setProfileId(newProfile.id);
-          setProfile({
-            id: newProfile.id,
-            username,
-            skin: newProfile.skin as SkinType,
-            totalMatches: 0,
-            bestDistance: 0,
-            averageDistance: 0,
-            totalPlaytime: 0,
-            joinDate: newProfile.created_at,
-            isGuest: false,
-          });
-        }
+        // Update store with profile data
+        setProfileId(profile.id);
+        setProfile({
+          id: profile.id,
+          username: profile.username,
+          skin: profile.skin as SkinType,
+          totalMatches: profile.total_matches,
+          bestDistance: profile.best_distance,
+          averageDistance: profile.average_distance,
+          totalPlaytime: profile.total_playtime,
+          joinDate: profile.created_at,
+          isGuest: false,
+          currency, // From backend, never cached
+          ownedSkins, // From backend, never cached
+        });
       } catch (err) {
-        console.error("Profile sync error:", err);
+        console.error("Error loading user profile:", err);
       }
     },
     [setProfile, setProfileId, currentSkin]
@@ -117,31 +149,60 @@ export function useAuth() {
 
   /* --------------------------------------------------
    * Auth listener
+   *
+   * This is the ONLY place where getOrCreateProfile() is called.
+   * It runs when:
+   * - Auth state changes (login, logout, token refresh)
+   * - Initial session is loaded
+   *
+   * Profile loading is idempotent - it only runs once per user.
    * -------------------------------------------------- */
   useEffect(() => {
     const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange((event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
+        // Reset loaded profile tracking on logout
+        if (event === 'SIGNED_OUT') {
+          loadedProfileForUserId.current = null;
+          // Clear profile state for guests
+          useGameStore.getState().resetGuestSession();
+        }
+
+        // Load profile ONLY for authenticated users with confirmed email
         if (session?.user?.email_confirmed_at) {
-          setTimeout(() => syncAuthProfile(session.user), 0);
+          loadUserProfile(session.user);
+        } else {
+          // User is not authenticated or email not confirmed
+          // Load or create guest profile from localStorage (not persisted to DB)
+          const guestProfile = getOrCreateGuestProfile();
+          setProfile(guestProfile);
+          setProfileId(null);
         }
       });
 
+    // Load initial session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
       setLoading(false);
 
+      // Load profile ONLY for authenticated users with confirmed email
       if (data.session?.user?.email_confirmed_at) {
-        setTimeout(() => syncAuthProfile(data.session.user), 0);
+        loadUserProfile(data.session.user);
+      } else {
+        // User is not authenticated or email not confirmed
+        // Load or create guest profile from localStorage (not persisted to DB)
+        const guestProfile = getOrCreateGuestProfile();
+        setProfile(guestProfile);
+        setProfileId(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [syncAuthProfile]);
+  }, [loadUserProfile, setProfile, setProfileId]);
 
   /* --------------------------------------------------
    * Auth actions
@@ -159,13 +220,26 @@ export function useAuth() {
   const signIn = async (email: string, password: string) =>
     supabase.auth.signInWithPassword({ email, password });
 
-  const signInWithGoogle = async () =>
-    supabase.auth.signInWithOAuth({
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
+
+    // If there's an error, return it
+    if (error) {
+      return { data: null, error };
+    }
+
+    // OAuth redirect will happen automatically, so we don't need to do anything else
+    return { data, error: null };
+  };
 
   const sendOtp = async (email: string) =>
     supabase.auth.signInWithOtp({
@@ -198,8 +272,10 @@ export function useAuth() {
 
     setUser(null);
     setSession(null);
+    loadedProfileForUserId.current = null;
 
-    // 🔥 HARD RESET guest state
+    // Clear profile state and reset to guest mode
+    // This ensures no user data persists after logout
     useGameStore.getState().resetGuestSession();
   };
 

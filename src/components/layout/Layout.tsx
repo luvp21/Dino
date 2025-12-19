@@ -1,8 +1,8 @@
-import React from 'react';
 import { Navigation } from './Navigation';
+import type { ReactNode } from 'react';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {

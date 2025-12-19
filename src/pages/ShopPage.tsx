@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameStore } from '@/store/gameStore';
+import { useAuth } from '@/hooks/useAuth';
 import { PixelCard, PixelCardHeader, PixelCardTitle } from '@/components/ui/PixelCard';
 import { PixelButton } from '@/components/ui/PixelButton';
 import { toast } from 'sonner';
-import { Coins, Star, Snowflake, Sparkles, Crown, Lock, Check } from 'lucide-react';
+import { Coins, Star, Snowflake, Sparkles, Crown, Lock, Check, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isGuestProfile } from '@/types/game';
 
 interface Skin {
   id: string;
@@ -21,46 +24,21 @@ interface Skin {
   available_until: string | null;
 }
 
-interface OwnedSkin {
-  skin_id: string;
-}
-
-const RARITY_COLORS = {
-  common: 'border-muted-foreground',
-  rare: 'border-blue-500',
-  epic: 'border-purple-500',
-  legendary: 'border-yellow-500',
-};
-
-const RARITY_GLOW = {
-  common: '',
-  rare: 'shadow-blue-500/20',
-  epic: 'shadow-purple-500/30',
-  legendary: 'shadow-yellow-500/40 animate-pulse',
-};
-
-const SKIN_PREVIEWS: Record<string, { bg: string; fg: string; dino: string }> = {
-  classic: { bg: '#FFFFFF', fg: '#1A1A1A', dino: '#262626' },
-  inverted: { bg: '#1A1A1A', fg: '#F2F2F2', dino: '#F2F2F2' },
-  phosphor: { bg: '#001A00', fg: '#00FF00', dino: '#00FF00' },
-  amber: { bg: '#1A0D00', fg: '#FFBF00', dino: '#FFBF00' },
-  crt: { bg: '#141414', fg: '#D9D9D9', dino: '#D9D9D9' },
-  winter: { bg: '#0A1929', fg: '#81D4FA', dino: '#4FC3F7' },
-  neon: { bg: '#0D0D0D', fg: '#FF00FF', dino: '#00FFFF' },
-  golden: { bg: '#1A1500', fg: '#FFD700', dino: '#FFC107' },
-};
-
 export default function ShopPage() {
-  const { profileId, profile, setSkin, currentSkin } = useGameStore();
+  const { profile, profileId, setSkin, currentSkin, getCurrency, purchaseSkin, getOwnedSkins } = useGameStore();
+  const { isAuthenticated } = useAuth();
   const [skins, setSkins] = useState<Skin[]>([]);
   const [ownedSkins, setOwnedSkins] = useState<string[]>([]);
   const [coins, setCoins] = useState(0);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
+  // Check if user is guest
+  const isGuest = profile ? isGuestProfile(profile) : true;
+
   useEffect(() => {
     loadShopData();
-  }, [profileId]);
+  }, [profileId, isAuthenticated]);
 
   const loadShopData = async () => {
     setLoading(true);
@@ -75,27 +53,19 @@ export default function ShopPage() {
         setSkins(skinsData as Skin[]);
       }
 
-      // Load owned skins
-      if (profileId) {
-        const { data: ownedData } = await supabase
-          .from('user_skins')
-          .select('skin_id')
-          .eq('profile_id', profileId);
+      // Only load owned skins and currency for authenticated users
+      if (!isGuest && profileId && isAuthenticated) {
+        // Fetch owned skins from backend
+        const owned = await getOwnedSkins();
+        setOwnedSkins(owned);
 
-        if (ownedData) {
-          setOwnedSkins(ownedData.map((o: OwnedSkin) => o.skin_id));
-        }
-
-        // Load coins
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('coins')
-          .eq('id', profileId)
-          .single();
-
-        if (profileData) {
-          setCoins(profileData.coins);
-        }
+        // Fetch currency from backend (NEVER trust client-side values)
+        const currency = await getCurrency();
+        setCoins(currency);
+      } else {
+        // Guests have no currency or owned skins
+        setOwnedSkins([]);
+        setCoins(0);
       }
     } catch (error) {
       console.error('Error loading shop data:', error);
@@ -104,6 +74,12 @@ export default function ShopPage() {
   };
 
   const handlePurchase = async (skin: Skin) => {
+    // Guard: Only authenticated users can purchase
+    if (isGuest || !isAuthenticated) {
+      toast.error('Please login to purchase skins');
+      return;
+    }
+
     if (!profileId) {
       toast.error('Please create a profile first');
       return;
@@ -111,21 +87,15 @@ export default function ShopPage() {
 
     setPurchasing(skin.id);
     try {
-      const { data, error } = await supabase.rpc('purchase_skin', {
-        p_profile_id: profileId,
-        p_skin_id: skin.id,
-      });
+      // Use store method which guards against guest usage
+      const success = await purchaseSkin(skin.id);
 
-      if (error) throw error;
-
-      const result = data as { success: boolean; error?: string; remaining_coins?: number };
-
-      if (result.success) {
+      if (success) {
         toast.success(`Purchased ${skin.name}!`);
-        setOwnedSkins([...ownedSkins, skin.id]);
-        setCoins(result.remaining_coins || 0);
+        // Reload data from backend
+        await loadShopData();
       } else {
-        toast.error(result.error || 'Purchase failed');
+        toast.error('Purchase failed - check your coins');
       }
     } catch (error: any) {
       toast.error(error.message || 'Purchase failed');
@@ -134,13 +104,14 @@ export default function ShopPage() {
   };
 
   const handleEquip = (skinKey: string) => {
+    // Both guests and users can equip skins (visual only)
     setSkin(skinKey as any);
     toast.success(`Equipped ${skinKey.toUpperCase()}`);
   };
 
   const isOwned = (skinId: string) => ownedSkins.includes(skinId);
   const isEquipped = (skinKey: string) => currentSkin === skinKey;
-  
+
   const isAvailable = (skin: Skin) => {
     if (!skin.is_seasonal || !skin.available_from || !skin.available_until) return true;
     const now = new Date();
@@ -160,17 +131,50 @@ export default function ShopPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Guest Warning Banner */}
+      {isGuest && (
+        <PixelCard className="border-yellow-500 bg-yellow-500/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <LogIn className="w-5 h-5 text-yellow-500" />
+              <div>
+                <p className="text-[12px] font-pixel text-yellow-500">LOGIN TO EARN COINS AND UNLOCK SKINS</p>
+                <p className="text-[8px] text-muted-foreground">
+                  Guest players cannot earn or spend currency. Login to save progress and unlock skins!
+                </p>
+              </div>
+            </div>
+            <Link to="/auth">
+              <PixelButton variant="primary" size="sm">
+                LOGIN
+              </PixelButton>
+            </Link>
+          </div>
+        </PixelCard>
+      )}
+
       {/* Header with Coins */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-[16px] md:text-[20px]">SKIN SHOP</h1>
           <p className="text-[8px] text-muted-foreground">
-            EARN COINS BY PLAYING • 1 COIN PER 100 DISTANCE
+            {isGuest
+              ? 'LOGIN TO EARN COINS BY PLAYING • 1 COIN PER 100 DISTANCE'
+              : 'EARN COINS BY PLAYING • 1 COIN PER 100 DISTANCE'
+            }
           </p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-card border-2 border-primary">
+        <div className={cn(
+          "flex items-center gap-2 px-4 py-2 bg-card border-2",
+          isGuest ? "border-muted-foreground opacity-50" : "border-primary"
+        )}>
           <Coins className="w-5 h-5 text-yellow-500" />
-          <span className="text-[16px] font-pixel text-primary">{coins}</span>
+          <span className="text-[16px] font-pixel text-primary">
+            {isGuest ? '0' : coins}
+          </span>
+          {isGuest && (
+            <span className="text-[6px] text-muted-foreground">(GUEST)</span>
+          )}
         </div>
       </div>
 
@@ -191,7 +195,8 @@ export default function ShopPage() {
                 isOwned={isOwned(skin.id)}
                 isEquipped={isEquipped(skin.skin_key)}
                 isAvailable={isAvailable(skin)}
-                canAfford={coins >= skin.price}
+                canAfford={!isGuest && coins >= skin.price}
+                isGuest={isGuest}
                 purchasing={purchasing === skin.id}
                 onPurchase={() => handlePurchase(skin)}
                 onEquip={() => handleEquip(skin.skin_key)}
@@ -214,7 +219,8 @@ export default function ShopPage() {
               isOwned={isOwned(skin.id) || skin.price === 0}
               isEquipped={isEquipped(skin.skin_key)}
               isAvailable={true}
-              canAfford={coins >= skin.price}
+              canAfford={!isGuest && coins >= skin.price}
+              isGuest={isGuest}
               purchasing={purchasing === skin.id}
               onPurchase={() => handlePurchase(skin)}
               onEquip={() => handleEquip(skin.skin_key)}
@@ -230,8 +236,10 @@ export default function ShopPage() {
           <span className="text-[10px] font-pixel">HOW TO EARN COINS</span>
         </div>
         <p className="text-[8px] text-muted-foreground">
-          PLAY GAMES TO EARN COINS! YOU GET 1 COIN FOR EVERY 100 DISTANCE TRAVELED.
-          THE HIGHER YOUR SCORE, THE MORE COINS YOU EARN!
+          {isGuest
+            ? 'LOGIN TO EARN COINS! PLAY GAMES TO EARN 1 COIN FOR EVERY 100 DISTANCE TRAVELED. THE HIGHER YOUR SCORE, THE MORE COINS YOU EARN!'
+            : 'PLAY GAMES TO EARN COINS! YOU GET 1 COIN FOR EVERY 100 DISTANCE TRAVELED. THE HIGHER YOUR SCORE, THE MORE COINS YOU EARN!'
+          }
         </p>
       </PixelCard>
     </div>
@@ -244,6 +252,7 @@ function SkinCard({
   isEquipped,
   isAvailable,
   canAfford,
+  isGuest,
   purchasing,
   onPurchase,
   onEquip,
@@ -253,6 +262,7 @@ function SkinCard({
   isEquipped: boolean;
   isAvailable: boolean;
   canAfford: boolean;
+  isGuest: boolean;
   purchasing: boolean;
   onPurchase: () => void;
   onEquip: () => void;
@@ -266,7 +276,8 @@ function SkinCard({
         RARITY_COLORS[skin.rarity],
         RARITY_GLOW[skin.rarity],
         isEquipped && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
-        !isAvailable && 'opacity-50'
+        !isAvailable && 'opacity-50',
+        isGuest && skin.price > 0 && !isOwned && 'opacity-60'
       )}
     >
       {/* Rarity Badge */}
@@ -275,6 +286,16 @@ function SkinCard({
         {skin.rarity === 'epic' && <Star className="w-4 h-4 text-purple-500" />}
         {skin.is_seasonal && <Snowflake className="w-4 h-4 text-blue-400" />}
       </div>
+
+      {/* Guest Lock Overlay */}
+      {isGuest && skin.price > 0 && !isOwned && (
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+          <div className="text-center">
+            <Lock className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-[8px] text-muted-foreground">LOGIN REQUIRED</p>
+          </div>
+        </div>
+      )}
 
       {/* Skin Preview */}
       <div
@@ -303,7 +324,7 @@ function SkinCard({
             </div>
           )}
         </div>
-        
+
         <p className="text-[6px] text-muted-foreground line-clamp-2">
           {skin.description}
         </p>
@@ -330,6 +351,11 @@ function SkinCard({
             <PixelButton size="sm" variant="primary" onClick={onEquip} className="w-full">
               EQUIP
             </PixelButton>
+          ) : isGuest ? (
+            <PixelButton size="sm" variant="outline" disabled className="w-full">
+              <Lock className="w-3 h-3 mr-1" />
+              LOGIN TO BUY
+            </PixelButton>
           ) : (
             <PixelButton
               size="sm"
@@ -346,3 +372,28 @@ function SkinCard({
     </div>
   );
 }
+
+const RARITY_COLORS = {
+  common: 'border-muted-foreground',
+  rare: 'border-blue-500',
+  epic: 'border-purple-500',
+  legendary: 'border-yellow-500',
+};
+
+const RARITY_GLOW = {
+  common: '',
+  rare: 'shadow-blue-500/20',
+  epic: 'shadow-purple-500/30',
+  legendary: 'shadow-yellow-500/40 animate-pulse',
+};
+
+const SKIN_PREVIEWS: Record<string, { bg: string; fg: string; dino: string }> = {
+  classic: { bg: '#FFFFFF', fg: '#1A1A1A', dino: '#262626' },
+  inverted: { bg: '#1A1A1A', fg: '#F2F2F2', dino: '#F2F2F2' },
+  phosphor: { bg: '#001A00', fg: '#00FF00', dino: '#00FF00' },
+  amber: { bg: '#1A0D00', fg: '#FFBF00', dino: '#FFBF00' },
+  crt: { bg: '#141414', fg: '#D9D9D9', dino: '#D9D9D9' },
+  winter: { bg: '#0A1929', fg: '#81D4FA', dino: '#4FC3F7' },
+  neon: { bg: '#0D0D0D', fg: '#FF00FF', dino: '#E74C3C' },
+  golden: { bg: '#1A1500', fg: '#FFD700', dino: '#FFC107' },
+};

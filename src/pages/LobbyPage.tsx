@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PixelButton } from '@/components/ui/PixelButton';
 import { PixelCard, PixelCardHeader, PixelCardTitle } from '@/components/ui/PixelCard';

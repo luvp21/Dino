@@ -5,7 +5,15 @@
 
 export type SkinType = 'classic' | 'inverted' | 'phosphor' | 'amber' | 'crt' | 'winter' | 'neon' | 'golden';
 
-export interface PlayerProfile {
+// =============================================
+// PROFILE TYPES - Guest vs Authenticated User
+// =============================================
+
+/**
+ * Base profile interface with common fields
+ * All profiles have these basic properties
+ */
+interface BaseProfile {
   id: string;
   username: string;
   skin: SkinType;
@@ -14,8 +22,50 @@ export interface PlayerProfile {
   averageDistance: number;
   totalPlaytime: number; // in seconds
   joinDate: string;
-  isGuest: boolean;
 }
+
+/**
+ * Guest Profile - Temporary, no persistence
+ * - No currency or inventory
+ * - No localStorage usage
+ * - Stats are ephemeral (reset on page refresh)
+ * - Can play but cannot earn/store anything
+ */
+export interface GuestProfile extends BaseProfile {
+  isGuest: true;
+  // Explicitly no currency or inventory fields
+}
+
+/**
+ * User Profile - Authenticated, persistent
+ * - Has currency and inventory
+ * - All data stored in backend
+ * - Currency always fetched from backend (never trust client)
+ */
+export interface UserProfile extends BaseProfile {
+  isGuest: false;
+  currency: number; // Always fetched from backend, never cached
+  ownedSkins: string[]; // Array of skin IDs owned
+}
+
+/**
+ * Union type for profile - discriminated by isGuest
+ * TypeScript will enforce proper type narrowing
+ */
+export type PlayerProfile = GuestProfile | UserProfile;
+
+// Type guards for runtime type checking
+export function isGuestProfile(profile: PlayerProfile): profile is GuestProfile {
+  return profile.isGuest === true;
+}
+
+export function isUserProfile(profile: PlayerProfile): profile is UserProfile {
+  return profile.isGuest === false;
+}
+
+// =============================================
+// GAME STATE TYPES
+// =============================================
 
 export interface GameInput {
   frame: number;
@@ -94,48 +144,13 @@ export interface GameResult {
   timestamp: string;
 }
 
-// Socket Events
-export interface ServerToClientEvents {
-  'lobby:update': (lobby: LobbyState) => void;
-  'lobby:joined': (lobby: LobbyState) => void;
-  'lobby:left': () => void;
-  'game:start': (data: { seed: number; players: PlayerGameState[] }) => void;
-  'game:state': (state: GameState) => void;
-  'game:input': (input: GameInput) => void;
-  'game:over': (results: GameResult[]) => void;
-  'leaderboard:update': (entries: LeaderboardEntry[]) => void;
-  'profile:update': (profile: PlayerProfile) => void;
-  'error': (message: string) => void;
-}
-
-export interface ClientToServerEvents {
-  'lobby:create': (username: string, skin: SkinType) => void;
-  'lobby:join': (lobbyId: string, username: string, skin: SkinType) => void;
-  'lobby:leave': () => void;
-  'lobby:ready': (isReady: boolean) => void;
-  'lobby:start': () => void;
-  'game:input': (input: Omit<GameInput, 'playerId'>) => void;
-  'game:frame': (frame: number) => void;
-  'leaderboard:get': (type: 'all-time' | 'weekly') => void;
-  'profile:get': () => void;
-  'profile:update': (data: Partial<PlayerProfile>) => void;
-}
-
 // Game Constants
 export const GAME_CONFIG = {
   // Canvas
   CANVAS_WIDTH: 1200,
   CANVAS_HEIGHT: 300,
 
-  // Physics
-  GRAVITY: 0.6,
-  JUMP_VELOCITY: -12,
-  MAX_FALL_VELOCITY: 15,
-
-  // Dino (matches official Chrome sprite dimensions)
-  DINO_WIDTH: 44,
-  DINO_HEIGHT: 47,
-  DINO_DUCK_WIDTH: 59,
+  // Dino positioning
   DINO_DUCK_HEIGHT: 26,
   DINO_X: 50,
 
@@ -145,46 +160,5 @@ export const GAME_CONFIG = {
 
   // Game
   INITIAL_SPEED: 6,
-  MAX_SPEED: 13,
-  SPEED_INCREMENT: 0.001,
-
-  // Obstacles
-  MIN_OBSTACLE_GAP: 100,
-  MAX_OBSTACLE_GAP: 250,
-
-  // Scoring
-  SCORE_PER_FRAME: 0.1,
-
-  // Multiplayer
-  TICK_RATE: 60, // frames per second
-  INPUT_DELAY: 2, // frames of input delay for sync
 } as const;
 
-// Seeded Random Number Generator
-export class SeededRNG {
-  private seed: number;
-
-  constructor(seed: number) {
-    this.seed = seed;
-  }
-
-  // Mulberry32 PRNG
-  next(): number {
-    let t = this.seed += 0x6D2B79F5;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
-
-  range(min: number, max: number): number {
-    return min + this.next() * (max - min);
-  }
-
-  intRange(min: number, max: number): number {
-    return Math.floor(this.range(min, max + 1));
-  }
-
-  choice<T>(array: T[]): T {
-    return array[this.intRange(0, array.length - 1)];
-  }
-}
