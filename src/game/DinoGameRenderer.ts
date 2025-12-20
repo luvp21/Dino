@@ -150,8 +150,8 @@ export class DinoGameRenderer {
 
     const sorted = [...state.players].sort((a, b) =>
       a.id === localPlayerId ? 1 :
-      b.id === localPlayerId ? -1 :
-      0
+        b.id === localPlayerId ? -1 :
+          0
     );
 
     sorted.forEach((p, index) => {
@@ -312,7 +312,7 @@ export class DinoGameRenderer {
     if (player.isDucking) {
       x = x + 30;
       y = y - 30;
-    } else{
+    } else {
       x = x + 4;
     }
 
@@ -462,7 +462,7 @@ export class DinoGameRenderer {
     this.ctx.filter = 'none';
     this.ctx.fillStyle = fg;
     this.ctx.textAlign = 'center';
-    this.ctx.font = '10px "Press Start 2P", monospace';
+    this.ctx.font = '16px "Press Start 2P", monospace';
 
     this.ctx.fillText(
       'PRESS SPACE TO RESTART',
@@ -517,9 +517,6 @@ export class DinoGameRenderer {
     this.ctx.textAlign = 'center';
 
     this.ctx.font = '16px "Press Start 2P", monospace';
-    this.ctx.fillText('PIXEL DINO', CANVAS_WIDTH / 2, 50);
-
-    this.ctx.font = '10px "Press Start 2P", monospace';
     this.ctx.fillText('PRESS SPACE TO START', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40);
   }
 

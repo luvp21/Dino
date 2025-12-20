@@ -21,8 +21,8 @@ const SKINS: SkinOption[] = [
     unlocked: true,
   },
   {
-    id: 'inverted',
-    name: 'INVERTED',
+    id: 'blue',
+    name: 'BLUE',
     description: 'DARK MODE FOR NIGHT RUNNERS',
     unlocked: true,
   },

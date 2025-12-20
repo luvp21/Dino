@@ -24,20 +24,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/skins" element={<SkinsPage />} />
-            <Route path="/shop" element={<ShopPage />} />
-            <Route path="/lobby" element={<LobbyPage />} />
-            <Route path="/game/:lobbyId" element={<MultiplayerGamePage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
+        <Routes>
+          <Route path="/" element={<Layout><HomePage /></Layout>} />
+          <Route path="/auth" element={<Layout><AuthPage /></Layout>} />
+          <Route path="/auth/callback" element={<Layout><AuthCallback /></Layout>} />
+          <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
+          <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+          <Route path="/skins" element={<Layout><SkinsPage /></Layout>} />
+          <Route path="/shop" element={<Layout><ShopPage /></Layout>} />
+          <Route path="/lobby" element={<Layout><LobbyPage /></Layout>} />
+          <Route path="/game/:lobbyId" element={<Layout><MultiplayerGamePage /></Layout>} />
+          <Route path="*" element={<Layout><NotFound /></Layout>} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

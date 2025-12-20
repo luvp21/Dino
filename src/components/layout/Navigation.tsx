@@ -24,12 +24,13 @@ export const Navigation: React.FC = () => {
   };
 
   return (
-    <nav className="pixel-border-thin bg-card">
+    <nav className="pixel p-2">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link to="/" className="text-[12px] md:text-[14px] font-pixel hover:text-muted-foreground transition-colors">
-            PIXEL DINO
+          <Link to="/" className="text-[16px] md:text-[18px] font-pixel font-bold hover:text-muted-foreground transition-colors">
+            <img src="/dino.png" alt="DinoSprint Logo" className="inline-block w-8 h-8 mr-2 mb-1" />
+            DinoSprint
           </Link>
 
           {/* Navigation Links */}
@@ -39,7 +40,7 @@ export const Navigation: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'nav-link text-[8px] md:text-[10px]',
+                  'nav-link text-[12px] md:text-[12px]',
                   location.pathname === item.path && 'nav-link-active'
                 )}
               >
@@ -51,7 +52,7 @@ export const Navigation: React.FC = () => {
           {/* Player Info & Auth */}
           <div className="flex items-center gap-3">
             {profile && (
-              <div className="hidden md:flex items-center gap-2 text-[8px]">
+              <div className="hidden md:flex items-center gap-1 text-[12px]">
                 <span className="text-muted-foreground">
                   {isAuthenticated ? '' : 'GUEST:'}
                 </span>
@@ -65,7 +66,7 @@ export const Navigation: React.FC = () => {
               isAuthenticated ? (
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-1 text-[8px] font-pixel text-muted-foreground hover:text-primary transition-colors"
+                  className="flex items-center gap-1 text-[12px] font-pixel text-muted-foreground hover:text-primary transition-colors"
                   title="Sign out"
                 >
                   <LogOut className="w-3 h-3" />
@@ -74,7 +75,7 @@ export const Navigation: React.FC = () => {
               ) : (
                 <Link
                   to="/auth"
-                  className="flex items-center gap-1 text-[8px] font-pixel text-muted-foreground hover:text-primary transition-colors"
+                  className="flex items-center gap-1 text-[12px] font-pixel text-primary transition-colors"
                 >
                   <LogIn className="w-3 h-3" />
                   <span className="hidden md:inline">LOGIN</span>

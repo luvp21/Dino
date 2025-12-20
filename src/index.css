@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 
+/*
  * PIXEL DINO - MONOCHROME ARCADE DESIGN SYSTEM
  * Chrome Dino meets multiplayer arcade platform
  * 100% pixel / retro - No gradients, no rounded corners
@@ -15,42 +15,44 @@
     /* Core monochrome palette */
     --background: 0 0% 100%;
     --foreground: 0 0% 10%;
-    
+
     /* Card / panels - slightly off-white for depth */
     --card: 0 0% 98%;
     --card-foreground: 0 0% 10%;
-    
+
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    
+
     /* Primary - pure black */
     --primary: 0 0% 10%;
     --primary-foreground: 0 0% 100%;
-    
+
     /* Secondary - light gray */
     --secondary: 0 0% 90%;
     --secondary-foreground: 0 0% 10%;
-    
+
     /* Muted elements */
     --muted: 0 0% 95%;
     --muted-foreground: 0 0% 45%;
-    
+
+
+
     /* Accent - medium gray */
     --accent: 0 0% 85%;
     --accent-foreground: 0 0% 10%;
-    
+
     /* Destructive - still monochrome */
     --destructive: 0 0% 20%;
     --destructive-foreground: 0 0% 100%;
-    
+
     /* Borders - crisp pixel borders */
     --border: 0 0% 10%;
     --input: 0 0% 10%;
     --ring: 0 0% 10%;
-    
+
     /* No radius - pixel perfect */
     --radius: 0px;
-    
+
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 0 0% 10%;
@@ -60,97 +62,30 @@
     --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 0 0% 10%;
     --sidebar-ring: 0 0% 10%;
-    
+
     /* Game-specific colors */
     --game-ground: 0 0% 45%;
     --game-sky: 0 0% 100%;
     --game-obstacle: 0 0% 20%;
     --game-dino: 0 0% 15%;
-    
+
     /* Skin variants */
     --skin-classic-bg: 0 0% 100%;
     --skin-classic-fg: 0 0% 15%;
-    
+
     --skin-inverted-bg: 0 0% 10%;
     --skin-inverted-fg: 0 0% 95%;
-    
+
     --skin-phosphor-bg: 120 100% 5%;
     --skin-phosphor-fg: 120 100% 50%;
-    
+
     --skin-amber-bg: 30 100% 5%;
     --skin-amber-fg: 45 100% 50%;
-    
+
     --skin-crt-bg: 0 0% 8%;
     --skin-crt-fg: 0 0% 85%;
   }
 
-  /* Inverted skin (dark mode style) */
-  .skin-inverted {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 95%;
-    --primary: 0 0% 95%;
-    --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 25%;
-    --accent-foreground: 0 0% 95%;
-    --border: 0 0% 95%;
-  }
-
-  /* Phosphor green skin */
-  .skin-phosphor {
-    --background: 120 100% 5%;
-    --foreground: 120 100% 50%;
-    --card: 120 100% 8%;
-    --card-foreground: 120 100% 50%;
-    --primary: 120 100% 50%;
-    --primary-foreground: 120 100% 5%;
-    --secondary: 120 50% 15%;
-    --secondary-foreground: 120 100% 50%;
-    --muted: 120 50% 10%;
-    --muted-foreground: 120 60% 35%;
-    --accent: 120 50% 20%;
-    --accent-foreground: 120 100% 50%;
-    --border: 120 100% 50%;
-  }
-
-  /* Amber terminal skin */
-  .skin-amber {
-    --background: 30 100% 5%;
-    --foreground: 45 100% 50%;
-    --card: 30 100% 8%;
-    --card-foreground: 45 100% 50%;
-    --primary: 45 100% 50%;
-    --primary-foreground: 30 100% 5%;
-    --secondary: 30 50% 15%;
-    --secondary-foreground: 45 100% 50%;
-    --muted: 30 50% 10%;
-    --muted-foreground: 45 60% 35%;
-    --accent: 30 50% 20%;
-    --accent-foreground: 45 100% 50%;
-    --border: 45 100% 50%;
-  }
-
-  /* CRT scanline skin */
-  .skin-crt {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 85%;
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 85%;
-    --primary: 0 0% 85%;
-    --primary-foreground: 0 0% 8%;
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 85%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 50%;
-    --accent: 0 0% 22%;
-    --accent-foreground: 0 0% 85%;
-    --border: 0 0% 85%;
-  }
 }
 
 @layer base {
@@ -161,24 +96,31 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Press Start 2P', monospace;
-    image-rendering: pixelated;
-    -webkit-font-smoothing: none;
-    -moz-osx-font-smoothing: none;
   }
 
   /* Pixel-perfect text rendering */
-  h1, h2, h3, h4, h5, h6, p, span, a, button, input, label {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  a,
+  button,
+  input,
+  label {
     font-family: 'Press Start 2P', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 }
 
 @layer components {
+
   /* Pixel border utilities */
   .pixel-border {
     border: 2px solid hsl(var(--border));
-    box-shadow: 
+    box-shadow:
       4px 4px 0 0 hsl(var(--border)),
       -2px -2px 0 0 hsl(var(--background)) inset;
   }
@@ -189,7 +131,7 @@
 
   .pixel-border-thick {
     border: 4px solid hsl(var(--border));
-    box-shadow: 
+    box-shadow:
       6px 6px 0 0 hsl(var(--border));
   }
 
@@ -249,20 +191,25 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.1) 2px,
-      rgba(0, 0, 0, 0.1) 4px
-    );
+    background: repeating-linear-gradient(0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.1) 2px,
+        rgba(0, 0, 0, 0.1) 4px);
     pointer-events: none;
   }
 
   /* Flicker animation for retro feel */
   @keyframes flicker {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.98; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.98;
+    }
   }
 
   .pixel-flicker {
@@ -271,8 +218,16 @@
 
   /* Blink cursor */
   @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
+
+    0%,
+    50% {
+      opacity: 1;
+    }
+
+    51%,
+    100% {
+      opacity: 0;
+    }
   }
 
   .pixel-cursor::after {

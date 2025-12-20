@@ -136,19 +136,19 @@ export default function ShopPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Guest Warning Banner */}
       {isGuest && (
-        <PixelCard className="border-yellow-500 bg-yellow-500/10">
+        <PixelCard className="border-blue-500 bg-blue-500/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <LogIn className="w-5 h-5 text-yellow-500" />
+              <LogIn className="w-5 h-5 text-blue-500" />
               <div>
-                <p className="text-[12px] font-pixel text-yellow-500">LOGIN TO EARN COINS AND UNLOCK SKINS</p>
-                <p className="text-[8px] text-muted-foreground">
+                <p className="text-[16px] font-pixel text-blue-500">LOGIN TO EARN COINS AND UNLOCK SKINS</p>
+                <p className="text-[12px] text-muted-foreground">
                   Guest players cannot earn or spend currency. Login to save progress and unlock skins!
                 </p>
               </div>
             </div>
             <Link to="/auth">
-              <PixelButton variant="primary" size="sm">
+              <PixelButton variant="primary" size="md">
                 LOGIN
               </PixelButton>
             </Link>
@@ -160,7 +160,7 @@ export default function ShopPage() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-[16px] md:text-[20px]">SKIN SHOP</h1>
-          <p className="text-[8px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             {isGuest
               ? 'LOGIN TO EARN COINS BY PLAYING • 1 COIN PER 100 DISTANCE'
               : 'EARN COINS BY PLAYING • 1 COIN PER 100 DISTANCE'
@@ -236,9 +236,9 @@ export default function ShopPage() {
       <PixelCard className="text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Coins className="w-4 h-4 text-yellow-500" />
-          <span className="text-[10px] font-pixel">HOW TO EARN COINS</span>
+          <span className="text-[16px] font-pixel">HOW TO EARN COINS</span>
         </div>
-        <p className="text-[8px] text-muted-foreground">
+        <p className="text-[12px] text-muted-foreground">
           {isGuest
             ? 'LOGIN TO EARN COINS! PLAY GAMES TO EARN 1 COIN FOR EVERY 100 DISTANCE TRAVELED. THE HIGHER YOUR SCORE, THE MORE COINS YOU EARN!'
             : 'PLAY GAMES TO EARN COINS! YOU GET 1 COIN FOR EVERY 100 DISTANCE TRAVELED. THE HIGHER YOUR SCORE, THE MORE COINS YOU EARN!'

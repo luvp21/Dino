@@ -62,14 +62,14 @@ const LeaderboardPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="text-[16px] md:text-[20px]">LEADERBOARD</h1>
-        <p className="text-[8px] text-muted-foreground">TOP PLAYERS RANKED BY BEST DISTANCE</p>
+        <h1 className="text-[16px] md:text-[28px]">LEADERBOARD</h1>
+        <p className="text-[12px] text-muted-foreground">TOP PLAYERS RANKED BY BEST DISTANCE</p>
       </div>
 
       <div className="flex justify-center gap-2">
         <PixelButton
           variant={activeTab === 'all-time' ? 'primary' : 'outline'}
-          size="sm"
+          size="md"
           onClick={() => setActiveTab('all-time')}
         >
           ALL TIME
@@ -85,7 +85,7 @@ const LeaderboardPage: React.FC = () => {
 
       <PixelCard>
         <PixelCardHeader>
-          <div className="flex items-center justify-between text-[8px] text-muted-foreground">
+          <div className="flex items-center justify-between text-[12px] text-muted-foreground">
             <span className="w-12">RANK</span>
             <span className="flex-1 text-left">PLAYER</span>
             <span className="w-20 text-right">DISTANCE</span>
@@ -125,9 +125,9 @@ const LeaderboardPage: React.FC = () => {
         <PixelCard className="text-center">
           <PixelCardHeader><PixelCardTitle>YOUR STATS</PixelCardTitle></PixelCardHeader>
           <div className="grid grid-cols-3 gap-4 text-[10px]">
-            <div><div className="text-[16px]">{profile.bestDistance}</div><div className="text-muted-foreground text-[8px]">BEST</div></div>
-            <div><div className="text-[16px]">{profile.totalMatches}</div><div className="text-muted-foreground text-[8px]">GAMES</div></div>
-            <div><div className="text-[16px]">{profile.averageDistance}</div><div className="text-muted-foreground text-[8px]">AVG</div></div>
+            <div><div className="text-[16px]">{profile.bestDistance}</div><div className="text-muted-foreground text-[12px]">BEST</div></div>
+            <div><div className="text-[16px]">{profile.totalMatches}</div><div className="text-muted-foreground text-[12px]">GAMES</div></div>
+            <div><div className="text-[16px]">{profile.averageDistance}</div><div className="text-muted-foreground text-[12px]">AVG</div></div>
           </div>
         </PixelCard>
       )}
