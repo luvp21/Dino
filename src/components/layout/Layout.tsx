@@ -1,6 +1,6 @@
 import { Navigation } from './Navigation';
 import type { ReactNode } from 'react';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,6 +13,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="flex-1 container mx-auto px-4 py-6">
         {children}
       </main>
+      <Analytics />
       <footer >
         <div className="container border-t border-border mx-auto px-4 py-3 flex items-center justify-between">
 
