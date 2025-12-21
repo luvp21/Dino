@@ -81,7 +81,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const [debugMode, setDebugMode] = useState(false);
 
   const FRAME_TIME = 1000 / FPS;
-  const RESTART_DELAY_MS = 500; // Delay before allowing restart after game over
+  const RESTART_DELAY_MS = 1000; // Delay before allowing restart after game over (1.5 seconds)
 
   // Award coins after game - ONLY for authenticated users
   // Guests get no-op (no coins earned)
@@ -223,18 +223,27 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       return;
     }
 
-    // Play sound effects
-    if (action === 'jump') {
-      soundEngine.playJump();
-    } else if (action === 'duck') {
-      soundEngine.playDuck();
-    }
-
     // Convert to engine input action
     const engineAction: InputAction =
       action === 'jump' ? 'jump' :
       action === 'duck' ? 'duck_start' :
       'duck_end';
+
+    // Check engine state before processing input to determine if action will actually execute
+    if (action === 'jump') {
+      const state = engineRef.current.getState();
+      // Only play jump sound if dino is not already jumping or ducking
+      // This prevents sound spam when holding space key
+      if (!state.tRex.jumping && !state.tRex.ducking) {
+        soundEngine.playJump();
+      }
+    } else if (action === 'duck') {
+      const state = engineRef.current.getState();
+      // Only play duck sound if dino is not already ducking
+      if (!state.tRex.ducking) {
+        soundEngine.playDuck();
+      }
+    }
 
     engineRef.current.processInput(engineAction);
   }, [profile, isRunning, gameOver, startGame]);
@@ -300,7 +309,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         if (gameOver) {
-          restartAndPlay(); // Restart directly into gameplay
+          // Check delay before allowing restart
+          const timeSinceGameOver = Date.now() - gameOverTimeRef.current;
+          if (timeSinceGameOver >= RESTART_DELAY_MS) {
+            restartAndPlay(); // Restart directly into gameplay
+          }
+          // If delay hasn't passed, do nothing (ignore the keypress)
         } else {
           handleInput('jump');
         }
@@ -338,7 +352,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       const y = touch.clientY - rect.top;
 
       if (gameOver) {
-        restartAndPlay();
+        // Check delay before allowing restart
+        const timeSinceGameOver = Date.now() - gameOverTimeRef.current;
+        if (timeSinceGameOver >= RESTART_DELAY_MS) {
+          restartAndPlay();
+        }
+        // If delay hasn't passed, do nothing (ignore the touch)
       } else if (y < rect.height / 2) {
         handleInput('jump');
       } else {
