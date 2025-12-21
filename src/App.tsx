@@ -1,4 +1,5 @@
 // Pixel Dino - Multiplayer Game
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/game/:lobbyId" element={<Layout><MultiplayerGamePage /></Layout>} />
           <Route path="*" element={<Layout><NotFound /></Layout>} />
         </Routes>
+        <SpeedInsights />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
