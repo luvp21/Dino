@@ -7,7 +7,7 @@ Disallow: /shop
 Disallow: /skins
 
 # Sitemap
-Sitemap: https://dinosprint.com/sitemap.xml
+Sitemap: https://dinosprint.vercel.app/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1

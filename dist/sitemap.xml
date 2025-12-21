@@ -4,19 +4,19 @@
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
   <url>
-    <loc>https://dinosprint.com/</loc>
+    <loc>https://dinosprint.vercel.app/</loc>
     <lastmod>2024-12-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://dinosprint.com/leaderboard</loc>
+    <loc>https://dinosprint.vercel.app/leaderboard</loc>
     <lastmod>2024-12-18</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dinosprint.com/auth</loc>
+    <loc>https://dinosprint.vercel.app/auth</loc>
     <lastmod>2024-12-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
