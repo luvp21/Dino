@@ -223,18 +223,22 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       return;
     }
 
-    // Play sound effects
-    if (action === 'jump') {
-      soundEngine.playJump();
-    } else if (action === 'duck') {
-      soundEngine.playDuck();
-    }
-
     // Convert to engine input action
     const engineAction: InputAction =
       action === 'jump' ? 'jump' :
       action === 'duck' ? 'duck_start' :
       'duck_end';
+
+    // Check if jump will actually execute before playing sound
+    if (action === 'jump') {
+      const tRex = engineRef.current.getTRex();
+      // Only play sound if dino is not already jumping or ducking
+      if (!tRex.jumping && !tRex.ducking) {
+        soundEngine.playJump();
+      }
+    } else if (action === 'duck') {
+      soundEngine.playDuck();
+    }
 
     engineRef.current.processInput(engineAction);
   }, [profile, isRunning, gameOver, startGame]);
