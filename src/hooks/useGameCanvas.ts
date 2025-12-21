@@ -81,7 +81,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const [debugMode, setDebugMode] = useState(false);
 
   const FRAME_TIME = 1000 / FPS;
-  const RESTART_DELAY_MS = 500; // Delay before allowing restart after game over
+  const RESTART_DELAY_MS = 1000; // Delay before allowing restart after game over
 
   // Award coins after game - ONLY for authenticated users
   // Guests get no-op (no coins earned)
