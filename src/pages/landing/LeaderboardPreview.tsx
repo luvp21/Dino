@@ -50,4 +50,3 @@ export const LeaderboardPreview: React.FC = () => {
     </section>
   );
 };
-

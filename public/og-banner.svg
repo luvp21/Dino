@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#000000"/>
+
+  <!-- Game Title -->
+  <text x="600" y="250" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#FFFFFF" text-anchor="middle">
+    DinoSprint
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="320" font-family="Arial, sans-serif" font-size="36" fill="#CCCCCC" text-anchor="middle">
+    Multiplayer Chrome Dino Endless Runner Game
+  </text>
+
+  <!-- Dino Icon Placeholder -->
+  <circle cx="600" cy="450" r="40" fill="#FFFFFF" opacity="0.9"/>
+  <text x="600" y="460" font-family="Arial, sans-serif" font-size="48" fill="#000000" text-anchor="middle">🦕</text>
+
+  <!-- Decorative elements -->
+  <rect x="100" y="100" width="4" height="430" fill="#FFFFFF" opacity="0.3"/>
+  <rect x="1096" y="100" width="4" height="430" fill="#FFFFFF" opacity="0.3"/>
+</svg>
+

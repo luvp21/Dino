@@ -109,14 +109,6 @@ export async function getAvailableLobbies(): Promise<LobbyState[]> {
   return [];
 }
 
-export function subscribeLobbyUpdates(
-  _lobbyId: string,
-  _callback: (lobby: LobbyState) => void
-): () => void {
-  console.warn('Multiplayer is currently disabled');
-  return () => {};
-}
-
 // WebSocket stub class
 export class GameWebSocket {
   connect(_lobbyId: string, _profileId: string, _callbacks: any): void {

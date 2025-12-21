@@ -10,9 +10,6 @@ import { submitGameResult } from '@/services/lobbyService';
 import { isGuestProfile } from '@/types/game';
 import { Trophy, LogIn, X } from 'lucide-react';
 import { Why } from './Why';
-import { HowToPlay } from './HowToPlay';
-import { LeaderboardPreview } from './LeaderboardPreview';
-import { SkinsSection } from './SkinsSection';
 import { FAQ } from './FAQ';
 
 const LandingPage: React.FC = () => {
@@ -273,4 +270,3 @@ const LandingPage: React.FC = () => {
 };
 
 export default LandingPage;
-

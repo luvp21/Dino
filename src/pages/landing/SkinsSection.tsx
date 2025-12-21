@@ -2,63 +2,51 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PixelCard } from '@/components/ui/PixelCard';
 import { PixelButton } from '@/components/ui/PixelButton';
+import { Trophy } from 'lucide-react';
 
-export const SkinsSection: React.FC = () => {
+export const LeaderboardPreview: React.FC = () => {
   const navigate = useNavigate();
 
-  // Placeholder skin cards
-  const skins = [
-    { id: 'classic', name: 'Classic', color: 'bg-foreground' },
-    { id: 'red', name: 'Red Dino', color: 'bg-red-500' },
-    { id: 'blue', name: 'Blue Dino', color: 'bg-blue-500' },
-    { id: 'inverted', name: 'Inverted', color: 'bg-muted border-2 border-foreground' },
-  ];
-
   return (
-    <section className="py-12 md:py-16 bg-muted/30">
+    <section className="py-12 md:py-16">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="text-[14px] md:text-[18px] font-pixel font-bold mb-4">
-            Skins System
+            Leaderboard & Competition
           </h2>
           <p className="text-[8px] md:text-[9px] text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Customize your dino with unique pixel art skins. Unlock new skins by
-            playing games, earning coins, and reaching milestones. Each skin offers
-            a fresh visual experience while maintaining the classic gameplay.
+            Compete with players from around the world. Track your best scores,
+            climb the rankings, and prove you're the ultimate DinoSprint champion.
+            Weekly and all-time leaderboards available.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {skins.map((skin) => (
-            <PixelCard
-              key={skin.id}
-              className="border border-border shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer"
-            >
-              <div className="space-y-3">
-                <div className={`w-full h-20 ${skin.color} border border-border flex items-center justify-center`}>
-                  <span className="text-[20px]">🦕</span>
-                </div>
-                <div className="text-center">
-                  <h3 className="text-[8px] md:text-[9px] font-pixel font-semibold">
-                    {skin.name}
-                  </h3>
-                </div>
+        <PixelCard className="border border-border shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 flex items-center justify-center border border-border bg-muted">
+                <Trophy className="w-6 h-6 text-foreground" />
               </div>
-            </PixelCard>
-          ))}
-        </div>
-
-        <div className="text-center">
-          <PixelButton
-            variant="outline"
-            size="md"
-            onClick={() => navigate('/shop')}
-          >
-            VIEW ALL SKINS
-          </PixelButton>
-        </div>
+              <div>
+                <h3 className="text-[11px] md:text-[12px] font-pixel font-semibold mb-1">
+                  Global Rankings
+                </h3>
+                <p className="text-[7px] md:text-[8px] text-muted-foreground">
+                  See where you rank among the best players
+                </p>
+              </div>
+            </div>
+            <PixelButton
+              variant="primary"
+              size="md"
+              onClick={() => navigate('/leaderboard')}
+              className="w-full md:w-auto"
+            >
+              VIEW LEADERBOARD
+            </PixelButton>
+          </div>
+        </PixelCard>
       </div>
     </section>
   );
 };
-

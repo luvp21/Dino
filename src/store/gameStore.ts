@@ -180,9 +180,6 @@ const getOrCreateGuestProfile = (): GuestProfile => {
   return newProfile;
 };
 
-// Generate guest profile - NO persistence, NO currency, NO inventory
-// This is kept for backward compatibility but should use getOrCreateGuestProfile instead
-const generateGuestProfile = (): GuestProfile => getOrCreateGuestProfile();
 
 export const useGameStore = create<GameStore>()(
   persist(
@@ -402,7 +399,7 @@ export const useGameStore = create<GameStore>()(
           // Create ephemeral guest profile that resets on page refresh
           // NOTE: Guests NEVER get profiles created in the database
           if (!profile || !isGuestProfile(profile)) {
-            profile = generateGuestProfile();
+            profile = getOrCreateGuestProfile();
           }
 
           set({
