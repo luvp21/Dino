@@ -101,7 +101,7 @@ export interface PlayerGameState {
 
 export interface Obstacle {
   id: string;
-  type: 'cactus-small' | 'cactus-large' | 'pterodactyl';
+  type: 'cactus-small' | 'cactus-large' | 'cactus-small-2' | 'cactus-small-3' | 'cactus-large-2' | 'cactus-large-3' | 'pterodactyl';
   x: number;
   y: number;
   width: number;
@@ -161,6 +161,6 @@ export const GAME_CONFIG = {
   DINO_START_Y: 203, // GROUND_Y - DINO_HEIGHT = 182 - 47 = 135
 
   // Game
-  INITIAL_SPEED: 6,
+  INITIAL_SPEED: 7,
 } as const;
 

@@ -356,16 +356,16 @@ function SkinCard({
       {/* Skin Info */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-pixel">{skin.name.toUpperCase()}</span>
+          <span className="text-[12px] font-pixel">{skin.name.toUpperCase()}</span>
           {skin.price > 0 && !isOwned && (
             <div className="flex items-center gap-1">
               <Coins className="w-3 h-3 text-yellow-500" />
-              <span className="text-[8px]">{skin.price}</span>
+              <span className="text-[12px]">{skin.price}</span>
             </div>
           )}
         </div>
 
-        <p className="text-[6px] text-muted-foreground line-clamp-2">
+        <p className="text-[10px] text-muted-foreground line-clamp-2">
           {skin.description}
         </p>
 

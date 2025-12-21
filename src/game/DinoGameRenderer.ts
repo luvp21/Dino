@@ -354,6 +354,10 @@ export class DinoGameRenderer {
     switch (type) {
       case 'cactus-small': return this.drawCactusSmall(x, y);
       case 'cactus-large': return this.drawCactusLarge(x, y);
+      case 'cactus-small-2': return this.drawCactusSmall2(x, y);
+      case 'cactus-small-3': return this.drawCactusSmall3(x, y);
+      case 'cactus-large-2': return this.drawCactusLarge2(x, y);
+      case 'cactus-large-3': return this.drawCactusLarge3(x, y);
       case 'pterodactyl': return this.drawPterodactyl(x, y);
     }
   }
@@ -365,6 +369,26 @@ export class DinoGameRenderer {
 
   private drawCactusLarge(x: number, y: number): void {
     const c = this.spriteDef.CACTUS_LARGE;
+    this.ctx.drawImage(this.spriteSheet!, c.x, c.y, c.w, c.h, x, y, c.w, c.h);
+  }
+
+  private drawCactusSmall2(x: number, y: number): void {
+    const c = this.spriteDef.CACTUS_SMALL_2;
+    this.ctx.drawImage(this.spriteSheet!, c.x, c.y, c.w, c.h, x, y, c.w, c.h);
+  }
+
+  private drawCactusSmall3(x: number, y: number): void {
+    const c = this.spriteDef.CACTUS_SMALL_3;
+    this.ctx.drawImage(this.spriteSheet!, c.x, c.y, c.w, c.h, x, y, c.w, c.h);
+  }
+
+  private drawCactusLarge2(x: number, y: number): void {
+    const c = this.spriteDef.CACTUS_LARGE_2;
+    this.ctx.drawImage(this.spriteSheet!, c.x, c.y, c.w, c.h, x, y, c.w, c.h);
+  }
+
+  private drawCactusLarge3(x: number, y: number): void {
+    const c = this.spriteDef.CACTUS_LARGE_3;
     this.ctx.drawImage(this.spriteSheet!, c.x, c.y, c.w, c.h, x, y, c.w, c.h);
   }
 
@@ -386,6 +410,18 @@ export class DinoGameRenderer {
         break;
       case 'cactus-large':
         h.fillRect(o.x + 8, o.y + 2, 10, 48);
+        break;
+      case 'cactus-small-2':
+        h.fillRect(o.x + 5, o.y + 2, 8, 69);
+        break;
+      case 'cactus-small-3':
+        h.fillRect(o.x + 5, o.y + 2, 8, 69);
+        break;
+      case 'cactus-large-2':
+        h.fillRect(o.x + 8, o.y + 2, 10, 99);
+        break;
+      case 'cactus-large-3':
+        h.fillRect(o.x + 8, o.y + 2, 10, 99);
         break;
     }
   }
@@ -565,7 +601,7 @@ export class DinoGameRenderer {
 
     // Starting x position for obstacles
     let startX = 300;
-    const spacing = 200;
+    const spacing = 150;
 
     OBSTACLE_TYPES.forEach((obstacleType, index) => {
       const x = startX + (index * spacing);
@@ -591,7 +627,7 @@ export class DinoGameRenderer {
         obstacleType.width - 2,
         obstacleType.height - 2
       );
-      this.drawBoundingBox(boundingBox, '#0000FF', 2);
+      this.drawBoundingBox(boundingBox, '#0000FF', 1);
 
       // Draw inner collision boxes (blue filled with transparency)
       obstacleType.collisionBoxes.forEach(collisionBox => {
@@ -623,6 +659,18 @@ export class DinoGameRenderer {
         break;
       case 'CACTUS_LARGE':
         this.drawCactusLarge(x, y);
+        break;
+      case 'CACTUS_SMALL_2':
+        this.drawCactusSmall2(x, y);
+        break;
+      case 'CACTUS_SMALL_3':
+        this.drawCactusSmall3(x, y);
+        break;
+      case 'CACTUS_LARGE_2':
+        this.drawCactusLarge2(x, y);
+        break;
+      case 'CACTUS_LARGE_3':
+        this.drawCactusLarge3(x, y);
         break;
       case 'PTERODACTYL':
         // Use frame 1 for start screen

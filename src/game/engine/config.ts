@@ -24,7 +24,7 @@ export const ENGINE_CONFIG = {
   SPEED_DROP_COEFFICIENT: 3,
 
   // Obstacles
-  GAP_COEFFICIENT: 0.6,
+  GAP_COEFFICIENT: 0.15,
   MAX_OBSTACLE_DUPLICATION: 2,
 
   // Timing

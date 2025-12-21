@@ -51,11 +51,13 @@ export interface SpriteDefinition {
   // Obstacles
   CACTUS_SMALL: SpriteCoords;
   CACTUS_LARGE: SpriteCoords;
+  CACTUS_SMALL_2: SpriteCoords;
+  CACTUS_SMALL_3: SpriteCoords;
+  CACTUS_LARGE_2: SpriteCoords;
+  CACTUS_LARGE_3: SpriteCoords;
   PTERODACTYL: { frame1: SpriteCoords; frame2: SpriteCoords };
 
   // Obstacle definitions with collision data
-  OBSTACLES: ObstacleType[];
-
   // Background
   HORIZON: SpriteCoords;
   CLOUD: SpriteCoords;
@@ -92,63 +94,16 @@ export const CLASSIC_SPRITE_DEFINITION: SpriteDefinition = {
   // Cacti obstacles (HDPI coords)
   CACTUS_SMALL: { x: 446, y: 2, w: 17, h: 35 },
   CACTUS_LARGE: { x: 652, y: 2, w: 25, h: 50 },
-
+  CACTUS_SMALL_2: { x: 858, y: 2, w: 67, h: 69 },
+  CACTUS_SMALL_3: { x: 548, y: 2, w: 100, h: 69 },
+  CACTUS_LARGE_2: { x: 702, y: 2, w: 99, h: 99 },
+  CACTUS_LARGE_3: { x: 801, y: 2, w: 149, h: 99 },
   // Pterodactyl (two frames for wing animation)
   PTERODACTYL: {
     frame1: { x: 260, y: 2, w: 46, h: 40 },
     frame2: { x: 306, y: 2, w: 46, h: 40 },
   },
 
-  // Official obstacle definitions with collision data
-  OBSTACLES: [
-    {
-      type: 'CACTUS_SMALL',
-      width: 17,
-      height: 35,
-      yPos: 105,
-      multipleSpeed: 4,
-      minGap: 120,
-      minSpeed: 0,
-      collisionBoxes: [
-        { x: 0, y: 7, width: 5, height: 27 },
-        { x: 4, y: 0, width: 6, height: 34 },
-        { x: 10, y: 4, width: 7, height: 14 },
-      ],
-    },
-    {
-      type: 'CACTUS_LARGE',
-      width: 25,
-      height: 50,
-      yPos: 90,
-      multipleSpeed: 7,
-      minGap: 120,
-      minSpeed: 0,
-      collisionBoxes: [
-        { x: 0, y: 12, width: 7, height: 38 },
-        { x: 8, y: 0, width: 7, height: 49 },
-        { x: 13, y: 10, width: 10, height: 38 },
-      ],
-    },
-    {
-      type: 'PTERODACTYL',
-      width: 46,
-      height: 40,
-      yPos: [100, 75, 50], // Variable height
-      multipleSpeed: 999,
-      minSpeed: 8.5,
-      minGap: 150,
-      collisionBoxes: [
-        { x: 15, y: 15, width: 16, height: 5 },
-        { x: 18, y: 21, width: 24, height: 6 },
-        { x: 2, y: 14, width: 4, height: 3 },
-        { x: 6, y: 10, width: 4, height: 7 },
-        { x: 10, y: 8, width: 6, height: 9 },
-      ],
-      numFrames: 2,
-      frameRate: 1000 / 6,
-      speedOffset: 0.8,
-    },
-  ],
 
   // Ground/horizon (HDPI)
   HORIZON: { x: 2, y: 104, w: 1200, h: 12 },
@@ -187,7 +142,11 @@ export const CLASSIC_SPRITE_DEFINITION_LDPI: SpriteDefinition = {
 
   // Cacti obstacles (LDPI coords)
   CACTUS_SMALL: { x: 446, y: 2, w: 33, h: 69 },
+  CACTUS_SMALL_2: { x: 480, y: 2, w: 67, h: 69 },
+  CACTUS_SMALL_3: { x: 548, y: 2, w: 100, h: 69 },
   CACTUS_LARGE: { x: 652, y: 2, w: 49, h: 99 },
+  CACTUS_LARGE_2: { x: 702, y: 2, w: 99, h: 99 },
+  CACTUS_LARGE_3: { x: 801, y: 2, w: 149, h: 99 },
 
   // Pterodactyl (LDPI)
   PTERODACTYL: {
@@ -195,56 +154,6 @@ export const CLASSIC_SPRITE_DEFINITION_LDPI: SpriteDefinition = {
     frame2: { x: 352, y: 2, w: 91, h: 58 },
   },
 
-  // Same obstacle definitions
-  OBSTACLES: [
-    {
-      type: 'CACTUS_SMALL',
-      width: 17,
-      height: 35,
-      yPos: 105,
-      multipleSpeed: 4,
-      minGap: 120,
-      minSpeed: 0,
-      collisionBoxes: [
-        { x: 0, y: 7, width: 5, height: 27 },
-        { x: 4, y: 0, width: 6, height: 34 },
-        { x: 10, y: 4, width: 7, height: 14 },
-      ],
-    },
-    {
-      type: 'CACTUS_LARGE',
-      width: 25,
-      height: 50,
-      yPos: 90,
-      multipleSpeed: 7,
-      minGap: 120,
-      minSpeed: 0,
-      collisionBoxes: [
-        { x: 0, y: 12, width: 7, height: 38 },
-        { x: 8, y: 0, width: 7, height: 49 },
-        { x: 13, y: 10, width: 10, height: 38 },
-      ],
-    },
-    {
-      type: 'PTERODACTYL',
-      width: 46,
-      height: 40,
-      yPos: [100, 75, 50],
-      multipleSpeed: 999,
-      minSpeed: 8.5,
-      minGap: 150,
-      collisionBoxes: [
-        { x: 15, y: 15, width: 16, height: 5 },
-        { x: 18, y: 21, width: 24, height: 6 },
-        { x: 2, y: 14, width: 4, height: 3 },
-        { x: 6, y: 10, width: 4, height: 7 },
-        { x: 10, y: 8, width: 6, height: 9 },
-      ],
-      numFrames: 2,
-      frameRate: 1000 / 6,
-      speedOffset: 0.8,
-    },
-  ],
 
   // Ground/horizon (LDPI)
   HORIZON: { x: 2, y: 102, w: 2400, h: 20 },

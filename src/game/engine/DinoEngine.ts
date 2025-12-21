@@ -325,7 +325,7 @@ export class DinoEngine {
       yPos = obstacleType.yPos;
     }
 
-    const minGap = Math.round(obstacleType.width * this.state.currentSpeed + obstacleType.minGap * ENGINE_CONFIG.GAP_COEFFICIENT);
+    const minGap = Math.round(Math.max(obstacleType.width * (12 - this.state.currentSpeed) , obstacleType.width * 3) + obstacleType.minGap * ENGINE_CONFIG.GAP_COEFFICIENT);
     const maxGap = Math.round(minGap * 1.5);
     const gap = this.rng.nextInt(minGap, maxGap);
 

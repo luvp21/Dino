@@ -26,6 +26,10 @@ function convertEngineStateToGameState(
     id: o.id,
     type: o.type === 'CACTUS_SMALL' ? 'cactus-small' :
           o.type === 'CACTUS_LARGE' ? 'cactus-large' :
+          o.type === 'CACTUS_SMALL_2' ? 'cactus-small-2' :
+          o.type === 'CACTUS_SMALL_3' ? 'cactus-small-3' :
+          o.type === 'CACTUS_LARGE_2' ? 'cactus-large-2' :
+          o.type === 'CACTUS_LARGE_3' ? 'cactus-large-3' :
           'pterodactyl',
     x: o.x,
     y: o.y,
@@ -67,6 +71,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const animationFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const accumulatorRef = useRef<number>(0);
+  const gameOverTimeRef = useRef<number>(0);
 
   const { profile, currentSkin, profileId } = useGameStore();
   const [isRunning, setIsRunning] = useState(false);
@@ -76,6 +81,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const [debugMode, setDebugMode] = useState(false);
 
   const FRAME_TIME = 1000 / FPS;
+  const RESTART_DELAY_MS = 500; // Delay before allowing restart after game over
 
   // Award coins after game - ONLY for authenticated users
   // Guests get no-op (no coins earned)
@@ -129,6 +135,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     setGameOver(false);
     setIsRunning(false);
     setScore(0);
+    gameOverTimeRef.current = 0; // Reset game over timestamp
   }, [currentSkin, debugMode]);
 
   // Game loop
@@ -147,6 +154,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       if (engineRef.current.isGameOver()) {
         setGameOver(true);
         setIsRunning(false);
+        gameOverTimeRef.current = Date.now(); // Record when game over happened
         // Play hit and game over sounds
         soundEngine.playHit();
         setTimeout(() => soundEngine.playGameOver(), 200);
@@ -241,6 +249,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const restartAndPlay = useCallback(() => {
     if (!canvasRef.current || !profile) return;
 
+    // Check if enough time has passed since game over
+    const timeSinceGameOver = Date.now() - gameOverTimeRef.current;
+    if (gameOver && timeSinceGameOver < RESTART_DELAY_MS) {
+      return; // Don't restart yet, delay hasn't passed
+    }
+
     cancelAnimationFrame(animationFrameRef.current);
 
     const seed = Date.now();
@@ -258,6 +272,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     setGameOver(false);
     setScore(0);
     setCoinsEarned(0);
+    gameOverTimeRef.current = 0; // Reset game over timestamp
 
     engineRef.current.start();
     setIsRunning(true);
@@ -266,7 +281,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
     accumulatorRef.current = 0;
 
     animationFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [profile, currentSkin, gameLoop]);
+  }, [profile, currentSkin, gameLoop, gameOver, debugMode]);
 
   // Keyboard controls
   useEffect(() => {

@@ -55,6 +55,26 @@ export const SKIN_CONFIGS: Partial<Record<string, SkinConfig>> = {
     previewImage: '/prv/red-prv.png',
   },
 
+  green: {
+    ...CLASSIC_BASE,
+    spriteSheet: '/green.png',
+    rarity: 'common',
+    previewImage: '/prv/green-prv.png',
+  },
+
+  golden: {
+    ...CLASSIC_BASE,
+    spriteSheet: '/golden.png',
+    rarity: 'common',
+    previewImage: '/prv/golden-prv.png',
+  },
+
+  purple: {
+    ...CLASSIC_BASE,
+    spriteSheet: '/purple.png',
+    rarity: 'common',
+    previewImage: '/prv/purple-prv.png',
+  },
 
 };
 
