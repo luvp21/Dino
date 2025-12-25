@@ -176,7 +176,11 @@ Create a `.env` file in the root directory with the following variables:
 
 ## Screenshots / Demo
 
-Screenshots and demo links can be added here. The live application is deployed at the production URL (configured in Vercel).
+<img width="1920" height="1079" alt="image" src="https://github.com/user-attachments/assets/b6d20bb3-00e5-4038-8fb6-60e1e519654b" />
+<img width="1920" height="1079" alt="image" src="https://github.com/user-attachments/assets/9b6b2c02-ed5b-4510-be25-5c6f324659da" />
+<img width="1920" height="1079" alt="image" src="https://github.com/user-attachments/assets/133815d3-bc9e-4d2c-9e88-20089d2e53ee" />
+<img width="1920" height="1079" alt="image" src="https://github.com/user-attachments/assets/02314058-c441-4f70-b1ef-10062423d99e" />
+
 
 ## Future Improvements / Roadmap
 
