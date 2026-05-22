@@ -76,6 +76,66 @@ export const SKIN_CONFIGS: Partial<Record<string, SkinConfig>> = {
     previewImage: '/prv/purple-prv.png',
   },
 
+  // Retro Green Phosphor terminal skin
+  phosphor: {
+    ...CLASSIC_BASE,
+    rarity: 'rare',
+    filter: 'brightness(1.1) sepia(1) saturate(10) hue-rotate(85deg)',
+    backgroundColor: '#031405',
+    groundColor: '#00ff00',
+    previewImage: '/prv/phosphor-prv.png',
+  },
+
+  // Vintage Amber terminal skin
+  amber: {
+    ...CLASSIC_BASE,
+    rarity: 'rare',
+    filter: 'brightness(1.1) sepia(1) saturate(8) hue-rotate(15deg)',
+    backgroundColor: '#140d02',
+    groundColor: '#ffb000',
+    previewImage: '/prv/amber-prv.png',
+  },
+
+  // Dark Mode / Inverted dino
+  inverted: {
+    ...CLASSIC_BASE,
+    rarity: 'common',
+    filter: 'invert(1) hue-rotate(180deg)',
+    backgroundColor: '#151515',
+    groundColor: '#ebebeb',
+    previewImage: '/prv/inverted-prv.png',
+  },
+
+  // Scanline CRT Monitor effect
+  crt: {
+    ...CLASSIC_BASE,
+    rarity: 'rare',
+    filter: 'contrast(1.15) brightness(0.85) sepia(0.05)',
+    backgroundColor: '#0f1012',
+    groundColor: '#a0a0a0',
+    previewImage: '/prv/crt-prv.png',
+  },
+
+  // Winter Ice Theme
+  winter: {
+    ...CLASSIC_BASE,
+    rarity: 'epic',
+    filter: 'hue-rotate(190deg) brightness(1.2) saturate(1.5)',
+    backgroundColor: '#e6f3ff',
+    groundColor: '#80c0ff',
+    previewImage: '/prv/winter-prv.png',
+  },
+
+  // Neon Vaporwave Theme
+  neon: {
+    ...CLASSIC_BASE,
+    rarity: 'epic',
+    filter: 'hue-rotate(290deg) saturate(2) brightness(1.1)',
+    backgroundColor: '#1a052e',
+    groundColor: '#ff007f',
+    previewImage: '/prv/neon-prv.png',
+  },
+
 };
 
 

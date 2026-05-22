@@ -83,8 +83,7 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   const FRAME_TIME = 1000 / FPS;
   const RESTART_DELAY_MS = 1000; // Delay before allowing restart after game over
 
-  // Award coins after game - ONLY for authenticated users
-  // Guests get no-op (no coins earned)
+  // Calculate and display coins locally (avoiding duplicate database write, since submitGameResult already calls the award_coins RPC on the backend)
   const awardCoins = useCallback(async (distance: number) => {
     // Guard: Only award coins for authenticated users
     if (!profileId || !profile) return 0;
@@ -96,21 +95,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       return 0;
     }
 
-    try {
-      const { data, error } = await supabase.rpc('award_coins', {
-        p_profile_id: profileId,
-        p_distance: distance,
-      });
-
-      if (!error && data) {
-        setCoinsEarned(data);
-        toast.success(`+${data} coins earned!`);
-        return data;
-      }
-    } catch (error) {
-      console.error('Error awarding coins:', error);
-    }
-    return 0;
+    // Client-side coin calculation matching backend RPC formula:
+    // 1 coin per 100 distance, minimum 1 coin
+    const coins = Math.max(1, Math.floor(distance / 100));
+    setCoinsEarned(coins);
+    toast.success(`+${coins} coins earned!`);
+    return coins;
   }, [profileId, profile]);
 
   // Initialize game
@@ -290,6 +280,14 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent browser default actions (like page scrolling) for game keys immediately
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+        e.preventDefault();
+      }
+
+      // Prevent browser repeat events from spamming ducking sound, but allow for jumping (continuous jumping)
+      if (e.repeat && e.code === 'ArrowDown') return;
+
       // Toggle debug mode with 'D' key
       if (e.code === 'KeyD' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -302,14 +300,12 @@ export function useGameCanvas(options: UseGameCanvasOptions = {}) {
       }
 
       if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
         if (gameOver) {
           restartAndPlay(); // Restart directly into gameplay
         } else {
           handleInput('jump');
         }
       } else if (e.code === 'ArrowDown') {
-        e.preventDefault();
         handleInput('duck');
       }
     };

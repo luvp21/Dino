@@ -1,13 +1,12 @@
 User-agent: *
 Allow: /
+Allow: /shop
 Disallow: /game/
 Disallow: /lobby
 Disallow: /profile
-Disallow: /shop
-Disallow: /skins
 
 # Sitemap
-Sitemap: https://dinosprint.vercel.app/sitemap.xml
+Sitemap: https://dinosprint.luvvv.me/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1

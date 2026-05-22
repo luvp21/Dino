@@ -3,12 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import HomePage from "@/pages/HomePage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import ProfilePage from "@/pages/ProfilePage";
-import SkinsPage from "@/pages/SkinsPage";
 import ShopPage from "@/pages/ShopPage";
 import LobbyPage from "@/pages/LobbyPage";
 import MultiplayerGamePage from "@/pages/MultiplayerGamePage";
@@ -32,7 +31,7 @@ const App = () => (
           <Route path="/auth/callback" element={<Layout><AuthCallback /></Layout>} />
           <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
           <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
-          <Route path="/skins" element={<Layout><SkinsPage /></Layout>} />
+          <Route path="/skins" element={<Navigate to="/shop" replace />} />
           <Route path="/shop" element={<Layout><ShopPage /></Layout>} />
           <Route path="/lobby" element={<Layout><LobbyPage /></Layout>} />
           <Route path="/game/:lobbyId" element={<Layout><MultiplayerGamePage /></Layout>} />

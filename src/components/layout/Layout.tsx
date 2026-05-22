@@ -22,7 +22,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* CENTER */}
           <a
-            href="https://luv-patel.vercel.app"
+            href="https://luvvv.me"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition"

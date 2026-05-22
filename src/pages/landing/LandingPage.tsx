@@ -187,14 +187,14 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="flex flex-wrap md:flex-nowrap gap-4 mb-6">
 
-            <PixelButton
-              variant="outline"
-              size="md"
+            <PixelCard
+              className="flex-1 min-w-[120px] text-center border-blue-500 bg-blue-500/5 hover:bg-blue-500/10 cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0_0_hsl(var(--border))] flex flex-col justify-center items-center min-h-[78px]"
               onClick={() => navigate('/leaderboard')}
-              className="flex-1 min-w-[120px] text-[16px]"
             >
-              LEADERBOARD
-            </PixelButton>
+              <div className="text-[14px] md:text-[16px] text-blue-500 font-bold uppercase tracking-wide">
+                LEADERBOARD
+              </div>
+            </PixelCard>
 
             <PixelCard className="flex-1 min-w-[120px] text-center border-border shadow-sm">
               <div className="text-[20px] mb-2">

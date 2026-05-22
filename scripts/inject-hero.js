@@ -165,20 +165,20 @@ const websiteStructuredData = `
   "@type": "WebSite",
   "name": "DinoSprint",
   "alternateName": "Dino Sprint",
-  "url": "https://dinosprint.vercel.app",
+  "url": "https://dinosprint.luvvv.me",
   "description": "Play DinoSprint, a modern multiplayer version of the classic Chrome Dino game. Compete globally, level up skills, unlock skins and climb the leaderboard.",
   "potentialAction": {
     "@type": "SearchAction",
     "target": {
       "@type": "EntryPoint",
-      "urlTemplate": "https://dinosprint.vercel.app/?q={search_term_string}"
+      "urlTemplate": "https://dinosprint.luvvv.me/?q={search_term_string}"
     },
     "query-input": "required name=search_term_string"
   },
   "publisher": {
     "@type": "Organization",
     "name": "DinoSprint",
-    "url": "https://dinosprint.vercel.app"
+    "url": "https://dinosprint.luvvv.me"
   }
 }
 </script>
@@ -195,25 +195,25 @@ const breadcrumbStructuredData = `
       "@type": "ListItem",
       "position": 1,
       "name": "Home",
-      "item": "https://dinosprint.vercel.app"
+      "item": "https://dinosprint.luvvv.me"
     },
     {
       "@type": "ListItem",
       "position": 2,
       "name": "Leaderboard",
-      "item": "https://dinosprint.vercel.app/leaderboard"
+      "item": "https://dinosprint.luvvv.me/leaderboard"
     },
     {
       "@type": "ListItem",
       "position": 3,
       "name": "Shop",
-      "item": "https://dinosprint.vercel.app/shop"
+      "item": "https://dinosprint.luvvv.me/shop"
     },
     {
       "@type": "ListItem",
       "position": 4,
       "name": "Multiplayer",
-      "item": "https://dinosprint.vercel.app/lobby"
+      "item": "https://dinosprint.luvvv.me/lobby"
     }
   ]
 }

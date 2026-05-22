@@ -117,8 +117,8 @@ export class DinoEngine {
     return this.collisionDebugData;
   }
 
-  processInput(action: InputAction): void {
-    if (this.state.isGameOver) return;
+  processInput(action: InputAction): boolean {
+    if (this.state.isGameOver) return false;
 
     const { tRex } = this.state;
 
@@ -129,22 +129,31 @@ export class DinoEngine {
           tRex.jumping = true;
           tRex.reachedMinHeight = false;
           tRex.speedDrop = false;
+          return true;
         }
         break;
       case 'duck_start':
         if (tRex.jumping) {
           // Fast fall when ducking in air
-          tRex.speedDrop = true;
-          tRex.jumpVelocity = 1;
+          if (!tRex.speedDrop) {
+            tRex.speedDrop = true;
+            tRex.jumpVelocity = 1;
+            return true;
+          }
         } else if (!tRex.ducking) {
           tRex.ducking = true;
+          return true;
         }
         break;
       case 'duck_end':
-        tRex.ducking = false;
-        tRex.speedDrop = false;
+        if (tRex.ducking || tRex.speedDrop) {
+          tRex.ducking = false;
+          tRex.speedDrop = false;
+          return true;
+        }
         break;
     }
+    return false;
   }
 
   update(): void {
